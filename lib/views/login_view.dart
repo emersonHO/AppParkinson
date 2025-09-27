@@ -30,7 +30,7 @@ class LoginView extends StatelessWidget{
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Text('Iniciar Sesión', style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Colors.indigo)),
+                          const Text('Iniciar Sesión', style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Colors.deepOrange)),
                           const SizedBox(height: 20),
                           TextFormField(
                             controller: _emailController,

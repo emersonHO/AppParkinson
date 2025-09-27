@@ -13,7 +13,7 @@ class SearchView extends StatelessWidget{
           builder: (context, viewModel, _) => Scaffold(
             appBar: AppBar(
               title: const Text('Buscar Personas'),
-              backgroundColor: Colors.indigo,
+              backgroundColor: Colors.deepOrange,
             ),
             body: viewModel.isLoading
                 ? const Center(child: CircularProgressIndicator())
@@ -39,7 +39,7 @@ class SearchView extends StatelessWidget{
                               margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                               child: ListTile(
                                 leading: CircleAvatar(
-                                  backgroundColor: Colors.indigo,
+                                  backgroundColor: Colors.deepOrange,
                                   child: Text(persona.nombre[0].toUpperCase(), style: const TextStyle(color: Colors.white)),
                                 ),
                                 title: Text('${persona.nombre} ${persona.apellido}'),
