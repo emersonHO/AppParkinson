@@ -7,7 +7,6 @@ class LoginScreen extends StatelessWidget {
   Future<void> _mockLogin(BuildContext context) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('session_active', true);
-    // After setting session active, navigate to Home
     Navigator.of(context).pushReplacementNamed('/home');
   }
 
