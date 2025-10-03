@@ -80,10 +80,7 @@ Una aplicación móvil Flutter con backend Flask para la evaluación y clasifica
    python -m venv venv
 
    # Windows:
-   venv\Scripts\activate
-
-   # macOS/Linux:
-   source venv/bin/activate
+   venv\bin\Activate.ps1
    ```
 
 3. **Instalar dependencias:**
