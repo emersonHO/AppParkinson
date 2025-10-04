@@ -45,6 +45,7 @@ class _SplashScreenState extends State<SplashScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.white,
       body: Stack(
         children: [
           Center(
@@ -54,21 +55,38 @@ class _SplashScreenState extends State<SplashScreen>
                 scale: _animation,
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
-                  children: const [
-                    FlutterLogo(size: 120),
-                    SizedBox(height: 20),
-                    Text(
-                      'Apoyo digital para la detección y seguimiento del Parkinson',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(fontSize: 16),
+                  children: [
+                    // 🔁 Reemplazamos FlutterLogo con imagen desde assets
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(16),
+                      child: Image.asset(
+                        '../../assets/images/app_logo.png',
+                        width: 120,
+                        height: 120,
+                        fit: BoxFit.contain,
+                      ),
                     ),
-                    SizedBox(height: 20),
-                    CircularProgressIndicator(),
+                    const SizedBox(height: 20),
+                    const Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 24),
+                      child: Text(
+                        'Apoyo digital para la detección y seguimiento del Parkinson',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 16,
+                          color: Colors.black87,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    const CircularProgressIndicator(),
                   ],
                 ),
               ),
             ),
           ),
+
+          // 🔘 Botón para saltar splash
           Positioned(
             top: 40,
             right: 20,
@@ -83,9 +101,18 @@ class _SplashScreenState extends State<SplashScreen>
                   Navigator.pushReplacementNamed(context, '/login');
                 }
               },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.green,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                padding:
+                const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              ),
               child: const Text('Saltar'),
             ),
-          )
+          ),
         ],
       ),
     );

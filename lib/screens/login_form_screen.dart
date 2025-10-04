@@ -25,12 +25,11 @@ class _LoginFormScreenState extends State<LoginFormScreen> {
     if (!_formKey.currentState!.validate()) return;
 
     final authViewModel = Provider.of<AuthViewModel>(context, listen: false);
-    
     authViewModel.updateCorreo(_correoController.text);
     authViewModel.updateContrasenia(_contraseniaController.text);
 
     final success = await authViewModel.validateLogin();
-    
+
     if (success && mounted) {
       Navigator.pushReplacementNamed(context, '/home');
     }
@@ -39,126 +38,141 @@ class _LoginFormScreenState extends State<LoginFormScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text("Iniciar Sesión"),
-        backgroundColor: Colors.blue[700],
-        foregroundColor: Colors.white,
-      ),
-      body: Consumer<AuthViewModel>(
-        builder: (context, authViewModel, child) {
-          return Padding(
-            padding: const EdgeInsets.all(24.0),
-            child: Form(
-              key: _formKey,
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  // Logo o icono de la app
-                  Icon(
-                    Icons.medical_services,
-                    size: 80,
-                    color: Colors.blue[700],
+      // Fondo con degradado suave
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [Color(0xFFE3F2FD), Color(0xFFBBDEFB)],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+          ),
+        ),
+        child: Consumer<AuthViewModel>(
+          builder: (context, authViewModel, child) {
+            return Center(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.symmetric(horizontal: 24.0),
+                child: Container(
+                  padding: const EdgeInsets.all(24),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(20),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black12.withOpacity(0.1),
+                        blurRadius: 10,
+                        spreadRadius: 2,
+                        offset: const Offset(0, 5),
+                      )
+                    ],
                   ),
-                  const SizedBox(height: 16),
-                  Text(
-                    "Parkinson App",
-                    style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: Colors.blue[700],
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    "Sistema de Evaluación y Seguimiento",
-                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                      color: Colors.grey[600],
-                    ),
-                  ),
-                  const SizedBox(height: 48),
-                  
-                  // Campo de correo
-                  TextFormField(
-                    controller: _correoController,
-                    decoration: const InputDecoration(
-                      labelText: "Correo electrónico",
-                      prefixIcon: Icon(Icons.email),
-                      border: OutlineInputBorder(),
-                    ),
-                    keyboardType: TextInputType.emailAddress,
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return "Campo requerido";
-                      }
-                      if (!value.contains('@')) {
-                        return "Ingrese un correo válido";
-                      }
-                      return null;
-                    },
-                    onChanged: (value) => authViewModel.updateCorreo(value),
-                  ),
-                  const SizedBox(height: 16),
-                  
-                  // Campo de contraseña
-                  TextFormField(
-                    controller: _contraseniaController,
-                    decoration: const InputDecoration(
-                      labelText: "Contraseña",
-                      prefixIcon: Icon(Icons.lock),
-                      border: OutlineInputBorder(),
-                    ),
-                    obscureText: true,
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return "Campo requerido";
-                      }
-                      if (value.length < 4) {
-                        return "Mínimo 4 caracteres";
-                      }
-                      return null;
-                    },
-                    onChanged: (value) => authViewModel.updateContrasenia(value),
-                  ),
-                  const SizedBox(height: 24),
-                  
-                  // Mensaje de error
-                  if (authViewModel.errorMessage != null)
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      margin: const EdgeInsets.only(bottom: 16),
-                      decoration: BoxDecoration(
-                        color: Colors.red[50],
-                        border: Border.all(color: Colors.red[300]!),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(Icons.error, color: Colors.red[700], size: 20),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              authViewModel.errorMessage!,
-                              style: TextStyle(color: Colors.red[700]),
+                  child: Form(
+                    key: _formKey,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Image.asset(
+                          '../../assets/images/app_logo.png',
+                          width: 100,
+                          height: 100,
+                        ),
+                        const SizedBox(height: 16),
+                        const Text(
+                          "Bienvenido de nuevo",
+                          style: TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black87,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        const Text(
+                          "Inicia sesión para continuar explorando nuestra aplicación.",
+                          textAlign: TextAlign.center,
+                          style: TextStyle(fontSize: 14, color: Colors.black54),
+                        ),
+                        const SizedBox(height: 24),
+
+                        // Campo correo
+                        TextFormField(
+                          controller: _correoController,
+                          decoration: InputDecoration(
+                            labelText: "Correo electrónico",
+                            prefixIcon: const Icon(Icons.email_outlined),
+                            filled: true,
+                            fillColor: Colors.grey[50],
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide(color: Colors.blue.shade100),
                             ),
                           ),
-                        ],
-                      ),
-                    ),
-                  
-                  // Botón de login
-                  SizedBox(
-                    width: double.infinity,
-                    height: 48,
-                    child: ElevatedButton(
-                      onPressed: authViewModel.isLoading ? null : _login,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.blue[700],
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
+                          keyboardType: TextInputType.emailAddress,
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return "Por favor ingresa tu correo.";
+                            }
+                            if (!value.contains('@')) {
+                              return "Correo inválido.";
+                            }
+                            return null;
+                          },
+                          onChanged: authViewModel.updateCorreo,
                         ),
-                      ),
-                      child: authViewModel.isLoading
-                          ? const SizedBox(
+                        const SizedBox(height: 16),
+
+                        // Campo contraseña
+                        TextFormField(
+                          controller: _contraseniaController,
+                          obscureText: true,
+                          decoration: InputDecoration(
+                            labelText: "Contraseña",
+                            prefixIcon: const Icon(Icons.lock_outline),
+                            filled: true,
+                            fillColor: Colors.grey[50],
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide(color: Colors.blue.shade100),
+                            ),
+                          ),
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return "Por favor ingresa tu contraseña.";
+                            }
+                            if (value.length < 4) {
+                              return "La contraseña debe tener al menos 4 caracteres.";
+                            }
+                            return null;
+                          },
+                          onChanged: authViewModel.updateContrasenia,
+                        ),
+                        const SizedBox(height: 16),
+
+                        // Mensaje de error
+                        if (authViewModel.errorMessage != null)
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 12),
+                            child: Text(
+                              authViewModel.errorMessage!,
+                              style: const TextStyle(color: Colors.blue),
+                            ),
+                          ),
+
+                        // Botón iniciar sesión
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton(
+                            onPressed: authViewModel.isLoading ? null : _login,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.green,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(vertical: 16),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              elevation: 3,
+                            ),
+                            child: authViewModel.isLoading
+                                ? const SizedBox(
                               height: 20,
                               width: 20,
                               child: CircularProgressIndicator(
@@ -166,26 +180,90 @@ class _LoginFormScreenState extends State<LoginFormScreen> {
                                 strokeWidth: 2,
                               ),
                             )
-                          : const Text(
-                              "Iniciar Sesión",
+                                : const Text(
+                              "Iniciar sesión",
                               style: TextStyle(fontSize: 16),
                             ),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+
+                        // Botón crear cuenta
+                        SizedBox(
+                          width: double.infinity,
+                          child: TextButton(
+                            onPressed: () {
+                              Navigator.pushNamed(context, '/register_form');
+                            },
+                            style: TextButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(vertical: 16),
+                              backgroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                side: const BorderSide(color: Colors.green),
+                              ),
+                            ),
+                            child: const Text(
+                              "Crear una nueva cuenta",
+                              style: TextStyle(
+                                color: Colors.green,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+
+                        // Línea divisora
+                        Row(
+                          children: const [
+                            Expanded(child: Divider()),
+                            Padding(
+                              padding: EdgeInsets.symmetric(horizontal: 8),
+                              child: Text("o"),
+                            ),
+                            Expanded(child: Divider()),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+
+                        // Botón Google
+                        GestureDetector(
+                          onTap: () {
+                            // Lógica futura para login con Google
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                            decoration: BoxDecoration(
+                              border: Border.all(color: Colors.black12),
+                              borderRadius: BorderRadius.circular(50),
+                              color: Colors.white,
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Image.asset(
+                                  '../../assets/images/google_logo.png',
+                                  width: 24,
+                                  height: 24,
+                                ),
+                                const SizedBox(width: 10),
+                                const Text(
+                                  "Continuar con Google",
+                                  style: TextStyle(color: Colors.black87),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                  const SizedBox(height: 16),
-                  
-                  // Enlace para crear cuenta
-                  TextButton(
-                    onPressed: () {
-                      Navigator.pushNamed(context, '/register_form');
-                    },
-                    child: const Text("¿No tienes cuenta? Regístrate aquí"),
-                  ),
-                ],
+                ),
               ),
-            ),
-          );
-        },
+            );
+          },
+        ),
       ),
     );
   }
