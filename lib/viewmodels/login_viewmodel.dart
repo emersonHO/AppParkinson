@@ -2,63 +2,21 @@ import 'package:flutter/material.dart';
 import '../services/api_service.dart';
 import '../models/usuario.dart';
 
-class AuthViewModel extends ChangeNotifier {
+class LoginViewModel extends ChangeNotifier {
   String correo = '';
   String contrasenia = '';
+  String nombre = '';
+  String rol = 'Paciente';
+  bool aceptaPoliticas = false;
+  
   bool isLoading = false;
   String? errorMessage;
   Usuario? currentUser;
 
   final ApiService _apiService = ApiService();
 
-  // Getters
   bool get isLoggedIn => currentUser != null;
-  String get userRole => currentUser?.rol ?? '';
 
-  /// Valida las credenciales del usuario
-  Future<bool> validateLogin() async {
-    if (correo.isEmpty || contrasenia.isEmpty) {
-      errorMessage = 'Por favor, complete todos los campos';
-      notifyListeners();
-      return false;
-    }
-
-    isLoading = true;
-    errorMessage = null;
-    notifyListeners();
-
-    try {
-      currentUser = await _apiService.validarUsuario(correo, contrasenia);
-      
-      if (currentUser != null) {
-        errorMessage = null;
-        isLoading = false;
-        notifyListeners();
-        return true;
-      } else {
-        errorMessage = 'Credenciales incorrectas';
-        isLoading = false;
-        notifyListeners();
-        return false;
-      }
-    } catch (e) {
-      errorMessage = 'Error de conexión: ${e.toString()}';
-      isLoading = false;
-      notifyListeners();
-      return false;
-    }
-  }
-
-  /// Cierra la sesión del usuario
-  void logout() {
-    currentUser = null;
-    correo = '';
-    contrasenia = '';
-    errorMessage = null;
-    notifyListeners();
-  }
-
-  /// Actualiza los campos de entrada
   void updateCorreo(String value) {
     correo = value;
     errorMessage = null;
@@ -71,7 +29,63 @@ class AuthViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Limpia los mensajes de error
+  Future<bool> validateLogin() async {
+    if (correo.isEmpty || contrasenia.isEmpty) {
+      errorMessage = 'Por favor, complete todos los campos';
+      notifyListeners();
+      return false;
+    }
+    isLoading = true;
+    errorMessage = null;
+    notifyListeners();
+    try {
+    currentUser = await _apiService.validarUsuario(correo, contrasenia);
+    return currentUser != null;
+    } catch (e) {
+    errorMessage = e.toString().replaceFirst('Exception: ', '');
+    return false;
+    } finally {
+    isLoading = false;
+    notifyListeners();
+    }
+  }
+
+  Future<bool> register() async {
+    if (nombre.isEmpty || correo.isEmpty || contrasenia.isEmpty || !aceptaPoliticas) {
+      errorMessage = 'Por favor, complete todos los campos y acepte las políticas.';
+      notifyListeners();
+      return false;
+    }
+
+    isLoading = true;
+    errorMessage = null;
+    notifyListeners();
+
+    try {
+      final data = {
+        'nombre': nombre,
+        'correo': correo,
+        'contrasena': contrasenia,
+        'rol': rol,
+        'acepta_politicas': aceptaPoliticas,
+      };
+      currentUser = await _apiService.registrarUsuario(data);
+      return currentUser != null;
+    } catch (e) {
+      // Corregido: Captura el mensaje de error específico de la excepción
+      errorMessage = e.toString().replaceFirst('Exception: ', '');
+      return false;
+    } finally {
+      isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  void logout() {
+    currentUser = null;
+    notifyListeners();
+  }
+
   void clearError() {
     errorMessage = null;
     notifyListeners();

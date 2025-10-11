@@ -1,130 +1,110 @@
-# Backend Flask - Parkinson App
+# Backend con Flask: Documentación Completa
 
-Este es el backend Flask que proporciona endpoints JSON mockeados para la aplicación móvil de evaluación de Parkinson.
+## 1. Propósito y Arquitectura
 
-## 🚀 Instalación y Ejecución
+Este directorio contiene el servidor API RESTful para la aplicación de monitoreo de Parkinson. Ha sido construido con **Flask**, un micro-framework de Python, y su principal responsabilidad es servir como una capa de persistencia y lógica de negocio.
 
-### Prerrequisitos
-- Python 3.8 o superior
-- pip (gestor de paquetes de Python)
+Las funciones clave del backend son:
 
-### Instalación
+-   **Servir una API REST:** Expone un conjunto de endpoints (rutas) a los que la aplicación de Flutter puede llamar para obtener o enviar datos.
+-   **Autenticación de Usuarios:** Gestiona el registro y el inicio de sesión de los usuarios.
+-   **Persistencia de Datos:** Se conecta a una base de datos SQLite para almacenar y recuperar información sobre usuarios, pacientes, médicos y resultados de pruebas.
+-   **Lógica de Negocio:** Centraliza las reglas y operaciones del sistema.
 
-1. **Navegar al directorio del backend:**
-   ```bash
-   cd backend
-   ```
+### Tecnologías Utilizadas
 
-2. **Crear un entorno virtual (recomendado):**
-   ```bash
-   python -m venv venv
-   
-   # En Windows:
-   venv\Scripts\activate
-   
-   # En macOS/Linux:
-   source venv/bin/activate
-   ```
+-   **Flask:** Es el framework web principal. Gestiona las rutas, las peticiones y las respuestas.
+-   **SQLAlchemy (ORM):** Actúa como un traductor entre los objetos de Python y las tablas de la base de datos. Nos permite definir la estructura de la base de datos usando clases de Python (Modelos) y realizar consultas de forma segura y programática.
+-   **Flask-Migrate:** Es una extensión para gestionar las "migraciones" de la base de datos. Cuando modificamos un modelo (ej: añadir una columna a la tabla `Usuario`), Flask-Migrate nos ayuda a actualizar la base de datos sin perder los datos existentes.
+-   **Flask-CORS:** Gestiona las políticas de CORS, permitiendo que nuestra app de Flutter (que se ejecuta en un dominio diferente) pueda comunicarse con este servidor.
 
-3. **Instalar dependencias:**
-   ```bash
-   pip install -r requirements.txt
-   ```
+---
 
-### Ejecución
+## 2. Estructura de la Base de Datos (Modelos)
 
-```bash
-python app.py
-```
+La base de datos se define en `app.py` a través de los siguientes modelos de SQLAlchemy:
 
-El servidor se ejecutará en `http://localhost:5000`
+-   **`Usuario`**: La tabla central que contiene la información básica de cualquier persona registrada en el sistema.
+    -   `usuario_id` (Clave Primaria)
+    -   `nombre`, `correo`, `contrasena`, `rol` (`Paciente` o `Médico`)
 
-## 📊 Endpoints Disponibles
+-   **`Paciente`**: Contiene información específica de los usuarios con rol de paciente. Está vinculada a un `Usuario` a través de una relación "uno a uno".
+    -   `paciente_id` (Clave Primaria)
+    -   `usuario_id` (Clave Foránea a `Usuario`)
+    -   `edad`, `genero`, `fecha_diagnostico`, `contacto_emergencia`
 
-### Endpoints Principales
+-   **`Medico`**: Similar a `Paciente`, contiene información específica de los médicos.
 
-| Método | Endpoint | Descripción |
-|--------|----------|-------------|
-| GET | `/health` | Verificar estado del servidor |
-| GET | `/usuarios.json` | Obtener todos los usuarios |
-| GET | `/pacientes.json` | Obtener todos los pacientes |
-| GET | `/pruebas.json` | Obtener todas las pruebas |
-| POST | `/pruebas` | Crear nueva prueba |
-| GET | `/resultados.json` | Obtener todos los resultados |
-| POST | `/resultados` | Crear nuevo resultado |
+-   **`ResultadoPrueba`**: Almacena los resultados de cada prueba realizada por un paciente.
 
-### Endpoints Adicionales
+-   *Otros modelos* como `RelacionMedicoPaciente` o `Consentimiento` están definidos para futuras ampliaciones.
 
-| Método | Endpoint | Descripción |
-|--------|----------|-------------|
-| GET | `/estadisticas` | Estadísticas generales del sistema |
-| POST | `/simular-prueba` | Simular procesamiento completo de prueba |
+Cada modelo tiene un método `.to_dict()` que se utiliza para serializar el objeto de Python a un formato JSON que pueda ser enviado a través de la API.
 
-## 🔧 Configuración
+---
 
-### Datos Mockeados
+## 3. API Endpoints (Rutas)
 
-El servidor incluye datos de prueba predefinidos:
+El archivo `app.py` define las siguientes rutas:
 
-- **Usuarios:** 4 usuarios (pacientes, médico, investigador)
-- **Pacientes:** 4 pacientes con información clínica
-- **Pruebas:** 5 pruebas de diferentes tipos
-- **Resultados:** 4 resultados con diferentes niveles de riesgo
+-   **`POST /registro.json`**: 
+    -   **Propósito:** Registrar un nuevo usuario. 
+    -   **Payload (JSON):** `nombre`, `correo`, `contrasena`, `rol`.
+    -   **Respuesta:** El objeto del nuevo usuario creado.
 
-### Credenciales de Prueba
+-   **`POST /login.json`**:
+    -   **Propósito:** Validar las credenciales de un usuario.
+    -   **Payload (JSON):** `correo`, `contrasena`.
+    -   **Respuesta:** El objeto del usuario si las credenciales son correctas, incluyendo su perfil de paciente/médico si existe.
 
-Para testing, puedes usar estas credenciales:
+-   **`GET /pacientes.json`**: 
+    -   **Propósito:** Obtener una lista de todos los pacientes registrados.
 
-| Rol | Correo | Contraseña |
-|-----|--------|------------|
-| Paciente | juan.perez@email.com | 123456 |
-| Paciente | maria.gonzalez@email.com | 123456 |
-| Médico | carlos.lopez@email.com | 123456 |
-| Investigador | ana.investigadora@email.com | 123456 |
+-   **`POST /resultados.json`**: 
+    -   **Propósito:** Guardar el resultado de una nueva prueba.
 
-## 🌐 CORS
+---
 
-El servidor está configurado con CORS habilitado para permitir conexiones desde el frontend Flutter durante el desarrollo.
+## 4. Guía de Ejecución
 
-## 📱 Integración con Flutter
+Sigue estos pasos para configurar y ejecutar el servidor localmente.
 
-El frontend Flutter está configurado para conectarse a este backend en `http://localhost:5000`. Asegúrate de que:
+1.  **Prerrequisitos:**
+    -   Tener [Python](https://www.python.org/downloads/) instalado (versión 3.8 o superior).
 
-1. El servidor Flask esté ejecutándose
-2. El frontend Flutter tenga la URL correcta en `ApiService`
-3. Ambos estén en la misma red o configurados para desarrollo local
+2.  **Navegar al Directorio:**
+    Desde una terminal, sitúate en esta carpeta (`backend/`).
 
-## 🔄 Flujo de Datos
+3.  **Crear y Activar el Entorno Virtual:**
+    Esto aísla las dependencias del proyecto.
+    ```sh
+    # Crear el entorno
+    python -m venv venv
 
-1. **Autenticación:** Usuario se autentica con `/usuarios.json`
-2. **Carga de Datos:** Se obtienen pacientes, pruebas y resultados
-3. **Ejecución de Prueba:** Se crea nueva prueba con `/pruebas`
-4. **Procesamiento:** Se simula análisis y se crea resultado con `/resultados`
-5. **Visualización:** Se muestran resultados en el frontend
+    # Activar en Windows
+    .\venv\Scripts\activate
 
-## 🛠️ Desarrollo
+    # Activar en macOS/Linux
+    source venv/bin/activate
+    ```
 
-### Agregar Nuevos Endpoints
+4.  **Instalar Dependencias:**
+    *Si existe un archivo `requirements.txt`, puedes usar `pip install -r requirements.txt`. Si no, puedes crearlo con los siguientes comandos:*
+    ```sh
+    pip install Flask Flask-SQLAlchemy Flask-Migrate Flask-Cors
+    pip freeze > requirements.txt
+    ```
 
-Para agregar nuevos endpoints, edita `app.py` y sigue el patrón existente:
+5.  **Inicializar la Base de Datos (Solo la primera vez):**
+    Estos comandos crean el archivo `app.db` y las tablas basadas en los modelos.
+    ```sh
+    flask db init
+    flask db migrate -m "Creación inicial de tablas"
+    flask db upgrade
+    ```
 
-```python
-@app.route('/nuevo-endpoint', methods=['GET'])
-def nuevo_endpoint():
-    return jsonify({"mensaje": "Nuevo endpoint funcionando"})
-```
-
-### Modificar Datos Mockeados
-
-Los datos están definidos como listas Python al inicio de `app.py`. Puedes modificarlos directamente o implementar persistencia con base de datos.
-
-## 🚨 Notas Importantes
-
-- Este es un servidor de desarrollo con datos mockeados
-- No incluye autenticación real ni persistencia de datos
-- Los datos se reinician cada vez que se reinicia el servidor
-- Para producción, implementar base de datos real y autenticación segura
-
-## 📞 Soporte
-
-Para problemas o preguntas sobre el backend, revisa los logs del servidor o contacta al equipo de desarrollo.
+6.  **Ejecutar el Servidor:**
+    ```sh
+    flask run
+    ```
+    El servidor se iniciará y estará escuchando en `http://127.0.0.1:5000`.

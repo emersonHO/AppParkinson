@@ -1,35 +1,31 @@
+import './paciente.dart';
+import './medico.dart';
+
 class Usuario {
   final int id;
   final String nombre;
   final String correo;
-  final String rol; // paciente, médico, investigador
-  final String contrasenia; // simulada en JSON
+  final String rol;
+  final Paciente? paciente;
+  final Medico? medico;
 
   Usuario({
     required this.id,
     required this.nombre,
     required this.correo,
     required this.rol,
-    required this.contrasenia,
+    this.paciente,
+    this.medico,
   });
 
   factory Usuario.fromJson(Map<String, dynamic> json) {
     return Usuario(
-      id: json['id'] ?? 0,
+      id: json['usuario_id'] ?? 0,
       nombre: json['nombre'] ?? '',
       correo: json['correo'] ?? '',
       rol: json['rol'] ?? 'paciente',
-      contrasenia: json['contraseña'] ?? '',
+      paciente: json.containsKey('paciente') ? Paciente.fromJson(json['paciente']) : null,
+      medico: json.containsKey('medico') ? Medico.fromJson(json['medico']) : null,
     );
-  }
-
-  Map<String, dynamic> toJson() {
-    return {
-      'id': id,
-      'nombre': nombre,
-      'correo': correo,
-      'rol': rol,
-      'contraseña': contrasenia,
-    };
   }
 }

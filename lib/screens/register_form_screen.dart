@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../viewmodels/login_viewmodel.dart';
 
 class RegisterFormScreen extends StatefulWidget {
   const RegisterFormScreen({super.key});
@@ -9,26 +11,29 @@ class RegisterFormScreen extends StatefulWidget {
 
 class _RegisterFormScreenState extends State<RegisterFormScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _nameController = TextEditingController();
-  final _emailController = TextEditingController();
-  final _passwordController = TextEditingController();
-  final _confirmPasswordController = TextEditingController();
-  String _role = "Paciente";
-  bool _acceptPolicies = false;
+  final TextEditingController _confirmPasswordController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
 
-  void _register() {
+  Future<void> _register() async {
     if (!_formKey.currentState!.validate()) return;
-    if (!_acceptPolicies) {
+
+    final loginViewModel = Provider.of<LoginViewModel>(context, listen: false);
+
+    final success = await loginViewModel.register();
+
+    if (success && mounted) {
+      Navigator.pushReplacementNamed(context, '/home');
+    } else if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Debes aceptar las políticas de privacidad")),
+        SnackBar(content: Text(loginViewModel.errorMessage ?? "Error desconocido")),
       );
-      return;
     }
-    Navigator.pushReplacementNamed(context, '/home');
   }
 
   @override
   Widget build(BuildContext context) {
+    final loginViewModel = Provider.of<LoginViewModel>(context);
+
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
@@ -61,9 +66,8 @@ class _RegisterFormScreenState extends State<RegisterFormScreen> {
               ),
               const SizedBox(height: 24),
 
-              // Nombre
+              // Nombre completo
               TextFormField(
-                controller: _nameController,
                 decoration: InputDecoration(
                   labelText: "Nombre completo",
                   prefixIcon: const Icon(Icons.person_outline),
@@ -74,14 +78,13 @@ class _RegisterFormScreenState extends State<RegisterFormScreen> {
                     borderSide: BorderSide(color: Colors.blue.shade100),
                   ),
                 ),
-                validator: (value) =>
-                value == null || value.isEmpty ? "Campo requerido" : null,
+                onChanged: (value) => loginViewModel.nombre = value,
+                validator: (value) => value == null || value.isEmpty ? "Campo requerido" : null,
               ),
               const SizedBox(height: 16),
 
-              // Email
+              // Correo electrónico
               TextFormField(
-                controller: _emailController,
                 decoration: InputDecoration(
                   labelText: "Correo electrónico",
                   prefixIcon: const Icon(Icons.email_outlined),
@@ -93,6 +96,7 @@ class _RegisterFormScreenState extends State<RegisterFormScreen> {
                   ),
                 ),
                 keyboardType: TextInputType.emailAddress,
+                onChanged: (value) => loginViewModel.correo = value,
                 validator: (value) {
                   if (value == null || value.isEmpty) return "Campo requerido";
                   if (!value.contains('@')) return "Correo inválido";
@@ -104,7 +108,6 @@ class _RegisterFormScreenState extends State<RegisterFormScreen> {
               // Contraseña
               TextFormField(
                 controller: _passwordController,
-                obscureText: true,
                 decoration: InputDecoration(
                   labelText: "Contraseña",
                   prefixIcon: const Icon(Icons.lock_outline),
@@ -115,6 +118,8 @@ class _RegisterFormScreenState extends State<RegisterFormScreen> {
                     borderSide: BorderSide(color: Colors.blue.shade100),
                   ),
                 ),
+                obscureText: true,
+                onChanged: (value) => loginViewModel.contrasenia = value,
                 validator: (value) {
                   if (value == null || value.isEmpty) return "Campo requerido";
                   if (value.length < 4) return "Mínimo 4 caracteres";
@@ -123,10 +128,9 @@ class _RegisterFormScreenState extends State<RegisterFormScreen> {
               ),
               const SizedBox(height: 16),
 
-              // Confirmar Contraseña
+              // Confirmar contraseña
               TextFormField(
                 controller: _confirmPasswordController,
-                obscureText: true,
                 decoration: InputDecoration(
                   labelText: "Confirmar Contraseña",
                   prefixIcon: const Icon(Icons.lock_outline),
@@ -137,6 +141,7 @@ class _RegisterFormScreenState extends State<RegisterFormScreen> {
                     borderSide: BorderSide(color: Colors.blue.shade100),
                   ),
                 ),
+                obscureText: true,
                 validator: (value) {
                   if (value == null || value.isEmpty) return "Campo requerido";
                   if (value != _passwordController.text) {
@@ -147,9 +152,9 @@ class _RegisterFormScreenState extends State<RegisterFormScreen> {
               ),
               const SizedBox(height: 24),
 
-              // Dropdown Rol
+              // Dropdown de rol
               DropdownButtonFormField<String>(
-                value: _role,
+                value: loginViewModel.rol,
                 decoration: InputDecoration(
                   labelText: "Selecciona tu rol",
                   filled: true,
@@ -162,37 +167,28 @@ class _RegisterFormScreenState extends State<RegisterFormScreen> {
                 items: ["Paciente", "Médico", "Investigador"]
                     .map((r) => DropdownMenuItem(value: r, child: Text(r)))
                     .toList(),
-                onChanged: (val) {
-                  setState(() {
-                    _role = val ?? "Paciente";
-                  });
-                },
+                onChanged: (val) => setState(() => loginViewModel.rol = val ?? "Paciente"),
               ),
               const SizedBox(height: 24),
 
-              // Checkbox de Políticas
+              // Checkbox de políticas
               CheckboxListTile(
                 contentPadding: EdgeInsets.zero,
                 title: const Text(
                   "Acepto las políticas de privacidad y términos de uso",
                   style: TextStyle(fontSize: 14),
                 ),
-                value: _acceptPolicies,
+                value: loginViewModel.aceptaPoliticas,
                 activeColor: Colors.green,
-                onChanged: (val) {
-                  setState(() {
-                    _acceptPolicies = val ?? false;
-                  });
-                },
+                onChanged: (val) => setState(() => loginViewModel.aceptaPoliticas = val ?? false),
               ),
-
               const SizedBox(height: 24),
 
               // Botón Crear Cuenta
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
-                  onPressed: _register,
+                  onPressed: loginViewModel.isLoading ? null : _register,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.green,
                     padding: const EdgeInsets.symmetric(vertical: 16),
@@ -201,13 +197,14 @@ class _RegisterFormScreenState extends State<RegisterFormScreen> {
                     ),
                     elevation: 4,
                   ),
-                  child: const Text(
+                  child: loginViewModel.isLoading
+                      ? const CircularProgressIndicator(color: Colors.white)
+                      : const Text(
                     "Crear Cuenta",
                     style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                   ),
                 ),
               ),
-
               const SizedBox(height: 32),
             ],
           ),

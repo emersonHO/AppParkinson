@@ -1,243 +1,82 @@
-# Parkinson App - Sistema de Evaluación y Seguimiento
+# App de Monitoreo de Parkinson: Documentación Completa
 
-Una aplicación móvil Flutter con backend Flask para la evaluación y clasificación del Parkinson, desarrollada bajo el patrón MVVM.
+## 1. Visión General del Proyecto
 
-## Arquitectura del Sistema
+Esta es una app diseñado para el monitoreo y seguimiento de pacientes con la enfermedad de Parkinson. El objetivo es proporcionar una herramienta intuitiva tanto para pacientes como para médicos, permitiendo la realización de pruebas motoras y cognitivas, y la visualización de los resultados a lo largo del tiempo.
 
-### Frontend (Flutter + MVVM)
+El proyecto se divide en dos componentes principales y desacoplados:
 
-- **Patrón:** MVVM (Model-View-ViewModel)
-- **Gestión de Estado:** Provider
-- **Comunicación:** HTTP REST API
-- **Plataformas:** Android (iOS en desarrollo)
+1.  **Frontend (Flutter):** Una aplicación moderna y reactiva que funciona en web y dispositivos móviles desde una única base de código.
+2.  **Backend (Flask):** Un servidor API ligero y robusto que gestiona la base de datos, la autenticación y la lógica de negocio.
 
-### Backend (Flutter)
+---
 
-- **Framework:** Flask (Python)
-- **Datos:** JSON mockeados en memoria
-- **CORS:** Habilitado para desarrollo
-- **Endpoints:** REST API JSON
+## 2. Arquitectura del Frontend (Flutter)
 
-## Funcionalidades Principales
+La aplicación de Flutter está construida siguiendo el patrón de diseño **MVVM (Model-View-ViewModel)**, que garantiza una separación clara entre la interfaz de usuario, la lógica de estado y la fuente de datos.
 
-### Entidades del Sistema
+La gestión del estado se implementa utilizando el paquete `provider`, que permite que los ViewModels sean accesibles en todo el árbol de widgets de forma eficiente.
 
-- **Usuario:** Cuenta de acceso (paciente, médico, investigador)
-- **Paciente:** Información clínica y personal
-- **Prueba:** Evaluaciones (espiral, tapping, voz, cuestionario)
-- **Resultado:** Análisis y clasificación de riesgo
+### Flujo de Datos (Ejemplo: Inicio de Sesión)
 
-### Pantallas Implementadas
+Para entender cómo funcionan las piezas juntas, aquí tienes el flujo de un inicio de sesión:
 
-1. **Splash Screen** - Pantalla de bienvenida
-2. **Login** - Autenticación de usuarios
-3. **Home Dashboard** - Panel principal con estadísticas
-4. **Selector de Prueba** - Elección del tipo de evaluación
-5. **Ejecución de Prueba** - Realización de la evaluación
-6. **Resultado** - Visualización de resultados y recomendaciones
-7. **Historial** - Lista de evaluaciones anteriores
+1.  **Vista (`login_form_screen.dart`):** El usuario introduce su correo y contraseña en los `TextFields`.
+2.  **Llamada al ViewModel:** Al pulsar el botón "Iniciar Sesión", la vista no hace ningún cálculo. Simplemente invoca una función del ViewModel: `loginViewModel.validateLogin()`.
+3.  **ViewModel (`login_viewmodel.dart`):**
+    -   Recibe la llamada y actualiza su estado (ej: `isLoading = true`).
+    -   Notifica a la vista que el estado ha cambiado (usando `notifyListeners()`), lo que provoca que la UI muestre un indicador de carga.
+    -   Llama al `ApiService` para realizar la petición real al backend: `_apiService.validarUsuario(correo, contrasena)`.
+4.  **Servicio (`api_service.dart`):**
+    -   Construye y ejecuta una petición HTTP POST a la ruta `/login.json` del servidor Flask.
+    -   Espera la respuesta del servidor. Si la respuesta es exitosa (código 200), decodifica el JSON recibido.
+5.  **Modelo (`usuario.dart`):**
+    -   El `ApiService` utiliza el constructor `Usuario.fromJson(json)` para convertir el mapa de datos JSON en un objeto Dart fuertemente tipado (`Usuario`).
+6.  **Retorno y Actualización de Estado:**
+    -   El `ApiService` devuelve el objeto `Usuario` al `LoginViewModel`.
+    -   El ViewModel recibe el objeto, lo guarda como el `currentUser`, cambia `isLoading` a `false` y notifica a la vista de nuevo.
+7.  **Reacción de la Vista:** La vista, al ser notificada, reconstruye su UI. Como ahora hay un `currentUser`, la lógica de navegación redirige al usuario a la `home_screen.dart`.
 
-## Instalación y Configuración
+### Estructura de Carpetas (`lib/`)
 
-### Prerrequisitos
+-   **`main.dart`**: Punto de entrada de la aplicación. Responsable de:
+    -   Configurar el `MultiProvider` para que todos los ViewModels estén disponibles para la app.
+    -   Definir la tabla de rutas de navegación (ej: `/login`, `/home`).
+    -   Establecer el tema global de la aplicación.
 
-- Flutter SDK 3.9.2+
-- Dart SDK
-- Python 3.8+
-- Android Studio / VS Code
+-   **`screens/`**: Contiene los widgets que representan una pantalla completa. Estas son las "Vistas" en MVVM. Son responsables de la apariencia y de capturar las interacciones del usuario, pero delegan toda la lógica a los ViewModels.
 
-### Frontend (Flutter)
+-   **`viewmodels/`**: Los "cerebros" de las vistas. Contienen la lógica de estado y las funciones que las vistas pueden llamar. Se comunican con los servicios y actualizan su estado, notificando a las vistas para que se redibujen.
 
-1. **Clonar el repositorio:**
+-   **`models/`**: Define las estructuras de datos puras de la aplicación (ej: `Usuario`, `Paciente`, `Resultado`). Su principal responsabilidad es proporcionar un método `fromJson` para parsear los datos de la API.
 
-   ```bash
-   git clone <repository-url>
-   cd mi_app
-   ```
+-   **`services/`**: Clases que encapsulan la comunicación con fuentes de datos externas. En este proyecto, su único miembro es `api_service.dart`, que centraliza todas las llamadas HTTP al backend.
 
-2. **Instalar dependencias:**
+---
 
-   ```bash
-   flutter pub get
-   ```
+## 3. Guía de Ejecución
 
-3. **Ejecutar la aplicación:**
-   ```bash
-   flutter run
-   ```
+Para ejecutar la aplicación, **ambos componentes (backend y frontend) deben estar en funcionamiento simultáneamente.**
 
-### Backend (Flutter)
+### Paso A: Iniciar el Backend
 
-1. **Navegar al directorio del backend:**
+Primero, asegúrate de que el servidor de Flask esté corriendo. Para ello, abre una terminal separada y sigue las instrucciones detalladas en el archivo `backend/README.md`.
 
-   ```bash
-   cd backend
-   ```
+### Paso B: Iniciar el Frontend
 
-2. **Crear entorno virtual:**
+Una vez que el backend esté activo, puedes ejecutar la aplicación de Flutter.
 
-   ```bash
-   python -m venv venv
+1.  **Prerrequisitos:**
+    -   Tener el [SDK de Flutter](https://docs.flutter.dev/get-started/install) instalado.
 
-   # Windows:
-   venv\bin\Activate.ps1
-   ```
+2.  **Obtener dependencias:**
+    Desde la raíz del proyecto, ejecuta:
+    ```sh
+    flutter pub get
+    ```
 
-3. **Instalar dependencias:**
-
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-4. **Ejecutar el servidor:**
-   ```bash
-   python app.py
-   ```
-
-El servidor se ejecutará en `http://localhost:5000`
-
-## Configuración de Conexión
-
-### Frontend → Backend
-
-El frontend está configurado para conectarse al backend en `lib/services/api_service.dart`:
-
-```dart
-static const String baseUrl = 'http://localhost:5000';
-```
-
-### Credenciales de Prueba
-
-| Rol          | Correo                      | Contraseña |
-| ------------ | --------------------------- | ---------- |
-| Paciente     | juan.perez@email.com        | 123456     |
-| Paciente     | maria.gonzalez@email.com    | 123456     |
-| Médico       | carlos.lopez@email.com      | 123456     |
-| Investigador | ana.investigadora@email.com | 123456     |
-
-## Endpoints del Backend
-
-### Principales
-
-- `GET /health` - Estado del servidor
-- `GET /usuarios.json` - Lista de usuarios
-- `GET /pacientes.json` - Lista de pacientes
-- `GET /pruebas.json` - Lista de pruebas
-- `POST /pruebas` - Crear nueva prueba
-- `GET /resultados.json` - Lista de resultados
-- `POST /resultados` - Crear nuevo resultado
-
-### Adicionales
-
-- `GET /estadisticas` - Estadísticas del sistema
-- `POST /simular-prueba` - Simular procesamiento de prueba
-
-## Estructura del Proyecto
-
-```
-mi_app/
-├── lib/
-│   ├── models/           # Modelos de datos
-│   │   ├── usuario.dart
-│   │   ├── paciente.dart
-│   │   ├── prueba.dart
-│   │   └── resultado.dart
-│   ├── viewmodels/       # Lógica de negocio
-│   │   ├── login_viewmodel.dart
-│   │   ├── paciente_viewmodel.dart
-│   │   ├── prueba_viewmodel.dart
-│   │   └── resultado_viewmodel.dart
-│   ├── screens/          # Pantallas de la aplicación
-│   │   ├── splash_screen.dart
-│   │   ├── login_form_screen.dart
-│   │   ├── home_screen.dart
-│   │   ├── prueba_selector_screen.dart
-│   │   ├── prueba_ejecucion_screen.dart
-│   │   ├── resultado_screen.dart
-│   │   └── historial_screen.dart
-│   ├── services/         # Servicios externos
-│   │   └── api_service.dart
-│   └── main.dart         # Punto de entrada
-├── backend/
-│   ├── app.py           # Servidor Flask
-│   ├── requirements.txt # Dependencias Python
-│   └── README.md        # Documentación del backend
-└── README.md            # Este archivo
-```
-
-## Flujo de la Aplicación
-
-1. **Inicio:** Usuario abre la app → Splash Screen
-2. **Autenticación:** Login con credenciales → Validación en backend
-3. **Dashboard:** Carga de datos del usuario → Estadísticas y accesos rápidos
-4. **Evaluación:** Selección de prueba → Ejecución → Procesamiento
-5. **Resultado:** Análisis simulado → Visualización de resultados
-6. **Historial:** Consulta de evaluaciones anteriores
-
-## Tipos de Pruebas
-
-### 1. Espiral
-
-- **Descripción:** Dibujo de espiral para evaluar control motor fino
-- **Métricas:** Fluidez, control, irregularidades
-
-### 2. Tapping
-
-- **Descripción:** Toque rítmico para evaluar coordinación
-- **Métricas:** Ritmo, consistencia, variaciones
-
-### 3. Voz
-
-- **Descripción:** Grabación de voz para análisis del habla
-- **Métricas:** Patrones de voz, claridad, ritmo
-
-### 4. Cuestionario
-
-- **Descripción:** Preguntas sobre síntomas y estado general
-- **Métricas:** Respuestas, patrones, síntomas reportados
-
-## Niveles de Riesgo
-
-- **Bajo:** Patrones normales, seguimiento regular
-- **Moderado:** Irregularidades menores, seguimiento médico
-- **Alto:** Patrones anómalos, evaluación especializada
-
-## Desarrollo
-
-### Agregar Nueva Pantalla
-
-1. Crear archivo en `lib/screens/`
-2. Agregar ruta en `lib/main.dart`
-3. Implementar navegación desde pantallas existentes
-
-### Agregar Nuevo Endpoint
-
-1. Modificar `backend/app.py`
-2. Actualizar `lib/services/api_service.dart`
-3. Probar conexión frontend-backend
-
-### Modificar Modelos
-
-1. Actualizar archivos en `lib/models/`
-2. Regenerar serialización si es necesario
-3. Actualizar ViewModels correspondientes
-
-## Consideraciones Importantes
-
-### Desarrollo
-
-- Backend con datos mockeados (no persistencia real)
-- CORS habilitado para desarrollo local
-- Autenticación simulada (no segura para producción)
-
-### Producción
-
-- Implementar base de datos real
-- Autenticación segura (JWT, OAuth)
-- Validación y sanitización de datos
-- Logs y monitoreo
-- HTTPS y certificados SSL
-
-## Licencia
-
-Este proyecto es un prototipo para investigación y desarrollo. Ver archivo de licencia para más detalles.
+3.  **Ejecutar la aplicación:**
+    Se recomienda ejecutar en un navegador para el desarrollo.
+    ```sh
+    flutter run -d chrome
+    ```

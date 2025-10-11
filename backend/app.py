@@ -1,332 +1,192 @@
 from flask import Flask, jsonify, request
-from flask_cors import CORS
-import json
+from flask_sqlalchemy import SQLAlchemy
+from flask_migrate import Migrate
+from flask_cors import CORS # <--- 1. IMPORTAR CORS
 import os
-from datetime import datetime, timedelta
-import random
+from datetime import datetime
 
+# ------------------- CONFIGURACIÓN -------------------
 app = Flask(__name__)
-CORS(app)  # Permitir CORS para desarrollo
+CORS(app) # <--- 2. ACTIVAR CORS PARA TODA LA APP
 
-# Datos mockeados
-USUARIOS = [
-    {
-        "id": 1,
-        "nombre": "Juan Pérez",
-        "correo": "juan.perez@email.com",
-        "rol": "paciente",
-        "contraseña": "123456"
-    },
-    {
-        "id": 2,
-        "nombre": "María González",
-        "correo": "maria.gonzalez@email.com",
-        "rol": "paciente",
-        "contraseña": "123456"
-    },
-    {
-        "id": 3,
-        "nombre": "Dr. Carlos López",
-        "correo": "carlos.lopez@email.com",
-        "rol": "médico",
-        "contraseña": "123456"
-    },
-    {
-        "id": 4,
-        "nombre": "Ana Investigadora",
-        "correo": "ana.investigadora@email.com",
-        "rol": "investigador",
-        "contraseña": "123456"
-    }
-]
+basedir = os.path.abspath(os.path.dirname(__file__))
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(basedir, 'app.db')
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
-PACIENTES = [
-    {
-        "id": 1,
-        "nombre": "Juan Pérez",
-        "edad": 65,
-        "genero": "M",
-        "fecha_diagnostico": "2020-05-10",
-        "contacto_emergencia": "999888777"
-    },
-    {
-        "id": 2,
-        "nombre": "María González",
-        "edad": 59,
-        "genero": "F",
-        "fecha_diagnostico": None,
-        "contacto_emergencia": "988777666"
-    },
-    {
-        "id": 3,
-        "nombre": "Roberto Silva",
-        "edad": 72,
-        "genero": "M",
-        "fecha_diagnostico": "2019-03-15",
-        "contacto_emergencia": "977666555"
-    },
-    {
-        "id": 4,
-        "nombre": "Carmen Ruiz",
-        "edad": 68,
-        "genero": "F",
-        "fecha_diagnostico": "2021-08-22",
-        "contacto_emergencia": "966555444"
-    }
-]
+db = SQLAlchemy(app)
+migrate = Migrate(app, db)
 
-PRUEBAS = [
-    {
-        "id": 1,
-        "tipo": "espiral",
-        "fecha": "2024-01-15T10:30:00",
-        "estado": "completada"
-    },
-    {
-        "id": 2,
-        "tipo": "tapping",
-        "fecha": "2024-01-16T14:20:00",
-        "estado": "completada"
-    },
-    {
-        "id": 3,
-        "tipo": "voz",
-        "fecha": "2024-01-17T09:15:00",
-        "estado": "completada"
-    },
-    {
-        "id": 4,
-        "tipo": "cuestionario",
-        "fecha": "2024-01-18T16:45:00",
-        "estado": "completada"
-    },
-    {
-        "id": 5,
-        "tipo": "espiral",
-        "fecha": "2024-01-20T11:00:00",
-        "estado": "pendiente"
-    }
-]
+# ... (el resto del archivo no necesita cambios) ...
 
-RESULTADOS = [
-    {
-        "id": 1,
-        "prueba_id": 1,
-        "nivel_riesgo": "bajo",
-        "confianza": 87.5,
-        "observaciones": "La espiral muestra patrones normales con buena fluidez y control. No se detectan irregularidades significativas."
-    },
-    {
-        "id": 2,
-        "prueba_id": 2,
-        "nivel_riesgo": "moderado",
-        "confianza": 72.3,
-        "observaciones": "Se detectan variaciones menores en el ritmo de tapping. Se recomienda seguimiento adicional."
-    },
-    {
-        "id": 3,
-        "prueba_id": 3,
-        "nivel_riesgo": "bajo",
-        "confianza": 81.7,
-        "observaciones": "Análisis de voz dentro de parámetros normales. Patrones de habla consistentes."
-    },
-    {
-        "id": 4,
-        "prueba_id": 4,
-        "nivel_riesgo": "alto",
-        "confianza": 68.2,
-        "observaciones": "Respuestas del cuestionario sugieren necesidad de evaluación especializada inmediata."
-    }
-]
+# ------------------- MODELOS DE LA BASE DE DATOS -------------------
 
-# ========== ENDPOINTS ==========
+class Usuario(db.Model):
+    usuario_id = db.Column(db.Integer, primary_key=True)
+    nombre = db.Column(db.String(100), nullable=False)
+    correo = db.Column(db.String(100), unique=True, nullable=False)
+    contrasena = db.Column(db.String(100), nullable=False)
+    rol = db.Column(db.String(50), nullable=False)
+    fecha_creacion = db.Column(db.DateTime, default=datetime.utcnow)
+    activo = db.Column(db.Boolean, default=True)
+
+    paciente = db.relationship('Paciente', backref='usuario', uselist=False, cascade="all, delete-orphan")
+    medico = db.relationship('Medico', backref='usuario', uselist=False, cascade="all, delete-orphan")
+    consentimiento = db.relationship('Consentimiento', backref='usuario', uselist=False, cascade="all, delete-orphan")
+
+    def to_dict(self, include_profile=False):
+        data = {
+            'usuario_id': self.usuario_id,
+            'nombre': self.nombre,
+            'correo': self.correo,
+            'rol': self.rol,
+            'fecha_creacion': self.fecha_creacion.isoformat(),
+            'activo': self.activo
+        }
+        if include_profile:
+            if self.rol == 'Paciente' and self.paciente:
+                data['paciente'] = self.paciente.to_dict()
+            elif self.rol == 'Médico' and self.medico:
+                data['medico'] = self.medico.to_dict()
+        return data
+
+class Paciente(db.Model):
+    paciente_id = db.Column(db.Integer, primary_key=True)
+    usuario_id = db.Column(db.Integer, db.ForeignKey('usuario.usuario_id'), nullable=False, unique=True)
+    edad = db.Column(db.Integer)
+    genero = db.Column(db.String(50))
+    fecha_diagnostico = db.Column(db.String(50))
+    contacto_emergencia = db.Column(db.String(100))
+    notas_medicas = db.Column(db.Text)
+    resultados = db.relationship('ResultadoPrueba', backref='paciente', lazy=True, cascade="all, delete-orphan")
+
+    def to_dict(self):
+        return {
+            'paciente_id': self.paciente_id,
+            'usuario_id': self.usuario_id,
+            'edad': self.edad,
+            'genero': self.genero,
+            'fecha_diagnostico': self.fecha_diagnostico,
+            'contacto_emergencia': self.contacto_emergencia,
+            'notas_medicas': self.notas_medicas
+        }
+
+class Medico(db.Model):
+    medico_id = db.Column(db.Integer, primary_key=True)
+    usuario_id = db.Column(db.Integer, db.ForeignKey('usuario.usuario_id'), nullable=False, unique=True)
+    especialidad = db.Column(db.String(100))
+    centro_medico = db.Column(db.String(100))
+    nro_colegiatura = db.Column(db.String(50))
+
+    def to_dict(self):
+        return {
+            'medico_id': self.medico_id,
+            'usuario_id': self.usuario_id,
+            'especialidad': self.especialidad,
+            'centro_medico': self.centro_medico,
+            'nro_colegiatura': self.nro_colegiatura
+        }
+
+class RelacionMedicoPaciente(db.Model):
+    relacion_id = db.Column(db.Integer, primary_key=True)
+    medico_id = db.Column(db.Integer, db.ForeignKey('medico.medico_id'), nullable=False)
+    paciente_id = db.Column(db.Integer, db.ForeignKey('paciente.paciente_id'), nullable=False)
+    fecha_asignacion = db.Column(db.DateTime, default=datetime.utcnow)
+
+class ResultadoPrueba(db.Model):
+    resultado_id = db.Column(db.Integer, primary_key=True)
+    paciente_id = db.Column(db.Integer, db.ForeignKey('paciente.paciente_id'), nullable=False)
+    tipo_prueba = db.Column(db.String(50), nullable=False)
+    fecha = db.Column(db.DateTime, default=datetime.utcnow)
+    nivel_riesgo = db.Column(db.String(50))
+    confianza = db.Column(db.Integer)
+    observaciones = db.Column(db.Text)
+    archivo_referencia = db.Column(db.String(200))
+
+    def to_dict(self):
+        return {
+            'resultado_id': self.resultado_id,
+            'paciente_id': self.paciente_id,
+            'tipo_prueba': self.tipo_prueba,
+            'fecha': self.fecha.isoformat(),
+            'nivel_riesgo': self.nivel_riesgo,
+            'confianza': self.confianza,
+            'observaciones': self.observaciones,
+            'archivo_referencia': self.archivo_referencia
+        }
+
+class PruebaConfiguracion(db.Model):
+    config_id = db.Column(db.Integer, primary_key=True)
+    tipo_prueba = db.Column(db.String(100), unique=True, nullable=False)
+    parametros_json = db.Column(db.Text)
+    ultima_actualizacion = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+class Consentimiento(db.Model):
+    consentimiento_id = db.Column(db.Integer, primary_key=True)
+    usuario_id = db.Column(db.Integer, db.ForeignKey('usuario.usuario_id'), nullable=False, unique=True)
+    fecha_aceptacion = db.Column(db.DateTime, default=datetime.utcnow)
+    politica_version = db.Column(db.String(50))
+    permisos_otorgados = db.Column(db.Boolean, default=False)
+
+# ------------------- RUTAS DE LA API -------------------
 
 @app.route('/health', methods=['GET'])
 def health_check():
-    """Endpoint de salud para verificar que el servidor está funcionando"""
-    return jsonify({
-        "status": "ok",
-        "message": "Servidor Flask funcionando correctamente",
-        "timestamp": datetime.now().isoformat()
-    })
+    return jsonify({'status': 'ok'}), 200
 
-@app.route('/usuarios.json', methods=['GET'])
-def get_usuarios():
-    """Obtiene todos los usuarios"""
-    return jsonify(USUARIOS)
+@app.route('/registro.json', methods=['POST'])
+def registro():
+    data = request.get_json()
+    if not data or not data.get('correo') or not data.get('contrasena'):
+        return jsonify({'error': 'Faltan datos requeridos'}), 400
+    if Usuario.query.filter_by(correo=data['correo']).first():
+        return jsonify({'error': 'El correo ya está registrado'}), 409
+    nuevo_usuario = Usuario(nombre=data['nombre'], correo=data['correo'], contrasena=data['contrasena'], rol=data['rol'])
+    db.session.add(nuevo_usuario)
+    db.session.flush()
+    if data['rol'] == 'Paciente':
+        db.session.add(Paciente(usuario_id=nuevo_usuario.usuario_id))
+    elif data['rol'] == 'Médico':
+        db.session.add(Medico(usuario_id=nuevo_usuario.usuario_id))
+    if data.get('acepta_politicas', False):
+        db.session.add(Consentimiento(usuario_id=nuevo_usuario.usuario_id, politica_version="1.0", permisos_otorgados=True))
+    db.session.commit()
+    return jsonify({'mensaje': 'Usuario creado', 'usuario': nuevo_usuario.to_dict(include_profile=True)}), 201
 
-@app.route('/usuarios/<int:usuario_id>', methods=['GET'])
-def get_usuario(usuario_id):
-    """Obtiene un usuario específico por ID"""
-    usuario = next((u for u in USUARIOS if u['id'] == usuario_id), None)
-    if usuario:
-        return jsonify(usuario)
-    return jsonify({"error": "Usuario no encontrado"}), 404
+@app.route('/login.json', methods=['POST'])
+def login():
+    data = request.get_json()
+    usuario = Usuario.query.filter_by(correo=data.get('correo')).first()
+    if not usuario or usuario.contrasena != data.get('contrasena'):
+        return jsonify({'error': 'Credenciales inválidas'}), 401
+    return jsonify({'mensaje': 'Login exitoso', 'usuario': usuario.to_dict(include_profile=True)})
 
 @app.route('/pacientes.json', methods=['GET'])
 def get_pacientes():
-    """Obtiene todos los pacientes"""
-    return jsonify(PACIENTES)
+    pacientes = Paciente.query.all()
+    return jsonify([p.to_dict() for p in pacientes])
 
-@app.route('/pacientes/<int:paciente_id>', methods=['GET'])
+@app.route('/pacientes/<int:paciente_id>.json', methods=['GET'])
 def get_paciente(paciente_id):
-    """Obtiene un paciente específico por ID"""
-    paciente = next((p for p in PACIENTES if p['id'] == paciente_id), None)
-    if paciente:
-        return jsonify(paciente)
-    return jsonify({"error": "Paciente no encontrado"}), 404
+    paciente = Paciente.query.get_or_404(paciente_id)
+    return jsonify(paciente.to_dict())
 
-@app.route('/pruebas.json', methods=['GET'])
-def get_pruebas():
-    """Obtiene todas las pruebas"""
-    return jsonify(PRUEBAS)
-
-@app.route('/pruebas', methods=['POST'])
-def crear_prueba():
-    """Crea una nueva prueba"""
-    data = request.get_json()
-    
-    nueva_prueba = {
-        "id": len(PRUEBAS) + 1,
-        "tipo": data.get('tipo', 'espiral'),
-        "fecha": datetime.now().isoformat(),
-        "estado": "pendiente"
-    }
-    
-    PRUEBAS.append(nueva_prueba)
-    return jsonify(nueva_prueba), 201
-
-@app.route('/pruebas/<int:prueba_id>', methods=['GET'])
-def get_prueba(prueba_id):
-    """Obtiene una prueba específica por ID"""
-    prueba = next((p for p in PRUEBAS if p['id'] == prueba_id), None)
-    if prueba:
-        return jsonify(prueba)
-    return jsonify({"error": "Prueba no encontrada"}), 404
-
-@app.route('/resultados.json', methods=['GET'])
-def get_resultados():
-    """Obtiene todos los resultados"""
-    return jsonify(RESULTADOS)
-
-@app.route('/resultados', methods=['POST'])
-def crear_resultado():
-    """Crea un nuevo resultado"""
-    data = request.get_json()
-    
-    nuevo_resultado = {
-        "id": len(RESULTADOS) + 1,
-        "prueba_id": data.get('prueba_id'),
-        "nivel_riesgo": data.get('nivel_riesgo', 'bajo'),
-        "confianza": data.get('confianza', 75.0),
-        "observaciones": data.get('observaciones', 'Resultado generado automáticamente')
-    }
-    
-    RESULTADOS.append(nuevo_resultado)
-    return jsonify(nuevo_resultado), 201
-
-@app.route('/resultados/<int:resultado_id>', methods=['GET'])
-def get_resultado(resultado_id):
-    """Obtiene un resultado específico por ID"""
-    resultado = next((r for r in RESULTADOS if r['id'] == resultado_id), None)
-    if resultado:
-        return jsonify(resultado)
-    return jsonify({"error": "Resultado no encontrado"}), 404
-
-# ========== ENDPOINTS ADICIONALES ==========
-
-@app.route('/estadisticas', methods=['GET'])
-def get_estadisticas():
-    """Obtiene estadísticas generales del sistema"""
-    stats = {
-        "total_usuarios": len(USUARIOS),
-        "total_pacientes": len(PACIENTES),
-        "total_pruebas": len(PRUEBAS),
-        "total_resultados": len(RESULTADOS),
-        "pruebas_completadas": len([p for p in PRUEBAS if p['estado'] == 'completada']),
-        "pruebas_pendientes": len([p for p in PRUEBAS if p['estado'] == 'pendiente']),
-        "resultados_bajo_riesgo": len([r for r in RESULTADOS if r['nivel_riesgo'] == 'bajo']),
-        "resultados_moderado_riesgo": len([r for r in RESULTADOS if r['nivel_riesgo'] == 'moderado']),
-        "resultados_alto_riesgo": len([r for r in RESULTADOS if r['nivel_riesgo'] == 'alto']),
-    }
-    return jsonify(stats)
-
-@app.route('/simular-prueba', methods=['POST'])
-def simular_prueba():
-    """Simula el procesamiento de una prueba y genera un resultado"""
-    data = request.get_json()
-    tipo_prueba = data.get('tipo', 'espiral')
-    
-    # Crear nueva prueba
-    nueva_prueba = {
-        "id": len(PRUEBAS) + 1,
-        "tipo": tipo_prueba,
-        "fecha": datetime.now().isoformat(),
-        "estado": "completada"
-    }
-    PRUEBAS.append(nueva_prueba)
-    
-    # Generar resultado simulado
-    nivel_riesgo = random.choice(['bajo', 'moderado', 'alto'])
-    confianza = random.uniform(60.0, 95.0)
-    
-    observaciones_por_tipo = {
-        'espiral': {
-            'bajo': 'La espiral muestra patrones normales con buena fluidez y control.',
-            'moderado': 'Se observan algunas irregularidades en la espiral que requieren seguimiento.',
-            'alto': 'La espiral presenta patrones anómalos que sugieren evaluación médica.'
-        },
-        'tapping': {
-            'bajo': 'Ritmo de tapping consistente y regular.',
-            'moderado': 'Se detectan variaciones menores en el ritmo de tapping.',
-            'alto': 'Patrones irregulares de tapping detectados.'
-        },
-        'voz': {
-            'bajo': 'Análisis de voz dentro de parámetros normales.',
-            'moderado': 'Se observan ligeras variaciones en el análisis de voz.',
-            'alto': 'Análisis de voz muestra patrones anómalos.'
-        },
-        'cuestionario': {
-            'bajo': 'Respuestas del cuestionario indican estado normal.',
-            'moderado': 'Algunas respuestas requieren seguimiento médico.',
-            'alto': 'Respuestas sugieren necesidad de evaluación especializada.'
-        }
-    }
-    
-    nuevo_resultado = {
-        "id": len(RESULTADOS) + 1,
-        "prueba_id": nueva_prueba['id'],
-        "nivel_riesgo": nivel_riesgo,
-        "confianza": round(confianza, 1),
-        "observaciones": observaciones_por_tipo.get(tipo_prueba, {}).get(nivel_riesgo, 'Resultado generado automáticamente.')
-    }
-    RESULTADOS.append(nuevo_resultado)
-    
-    return jsonify({
-        "prueba": nueva_prueba,
-        "resultado": nuevo_resultado
-    }), 201
-
-# ========== CONFIGURACIÓN ==========
+@app.route('/resultados.json', methods=['GET', 'POST'])
+def handle_resultados():
+    if request.method == 'POST':
+        data = request.get_json()
+        nuevo_resultado = ResultadoPrueba(
+            paciente_id=data['paciente_id'],
+            tipo_prueba=data['tipo_prueba'],
+            nivel_riesgo=data.get('nivel_riesgo'),
+            confianza=data.get('confianza'),
+            observaciones=data.get('observaciones')
+        )
+        db.session.add(nuevo_resultado)
+        db.session.commit()
+        return jsonify(nuevo_resultado.to_dict()), 201
+    else:
+        resultados = ResultadoPrueba.query.all()
+        return jsonify([r.to_dict() for r in resultados])
 
 if __name__ == '__main__':
-    print("🚀 Iniciando servidor Flask para Parkinson App")
-    print("📊 Endpoints disponibles:")
-    print("   - GET  /health - Verificar estado del servidor")
-    print("   - GET  /usuarios.json - Obtener usuarios")
-    print("   - GET  /pacientes.json - Obtener pacientes")
-    print("   - GET  /pruebas.json - Obtener pruebas")
-    print("   - POST /pruebas - Crear nueva prueba")
-    print("   - GET  /resultados.json - Obtener resultados")
-    print("   - POST /resultados - Crear nuevo resultado")
-    print("   - GET  /estadisticas - Estadísticas del sistema")
-    print("   - POST /simular-prueba - Simular prueba completa")
-    print("\n🌐 Servidor ejecutándose en: http://localhost:5000")
-    print("📱 Frontend configurado para: http://localhost:5000")
-    
-    app.run(
-        host='0.0.0.0',
-        port=5000,
-        debug=True,
-        threaded=True
-    )
+    app.run(debug=True, host='0.0.0.0', port=5000)

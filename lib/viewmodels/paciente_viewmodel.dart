@@ -10,7 +10,6 @@ class PacienteViewModel extends ChangeNotifier {
 
   final ApiService _apiService = ApiService();
 
-  /// Carga todos los pacientes
   Future<void> loadPacientes() async {
     isLoading = true;
     errorMessage = null;
@@ -18,16 +17,14 @@ class PacienteViewModel extends ChangeNotifier {
 
     try {
       pacientes = await _apiService.fetchPacientes();
-      isLoading = false;
-      notifyListeners();
     } catch (e) {
       errorMessage = 'Error al cargar pacientes: ${e.toString()}';
+    } finally {
       isLoading = false;
       notifyListeners();
     }
   }
 
-  /// Obtiene un paciente por ID
   Future<void> loadPaciente(int id) async {
     isLoading = true;
     errorMessage = null;
@@ -35,49 +32,36 @@ class PacienteViewModel extends ChangeNotifier {
 
     try {
       currentPaciente = await _apiService.getPaciente(id);
-      isLoading = false;
-      notifyListeners();
     } catch (e) {
       errorMessage = 'Error al cargar paciente: ${e.toString()}';
+    } finally {
       isLoading = false;
       notifyListeners();
     }
   }
 
-  /// Busca pacientes por nombre
-  List<Paciente> searchPacientes(String query) {
+  List<Paciente> filterPacientes(String query) {
     if (query.isEmpty) return pacientes;
-    
-    return pacientes
-        .where((paciente) =>
-            paciente.nombre.toLowerCase().contains(query.toLowerCase()))
-        .toList();
+    final queryId = int.tryParse(query);
+    if (queryId != null) {
+      return pacientes.where((p) => p.id == queryId).toList();
+    }
+    return [];
   }
 
-  /// Filtra pacientes por género
+  List<Paciente> filterByEdad(int minEdad, int maxEdad) {
+    return pacientes.where((paciente) {
+      final edad = paciente.edad;
+      if (edad == null) return false;
+      return edad >= minEdad && edad <= maxEdad;
+    }).toList();
+  }
+
   List<Paciente> filterByGenero(String genero) {
     if (genero.isEmpty) return pacientes;
-    
-    return pacientes
-        .where((paciente) => paciente.genero == genero)
-        .toList();
+    return pacientes.where((paciente) => paciente.genero == genero).toList();
   }
 
-  /// Filtra pacientes por rango de edad
-  List<Paciente> filterByEdad(int minEdad, int maxEdad) {
-    return pacientes
-        .where((paciente) => 
-            paciente.edad >= minEdad && paciente.edad <= maxEdad)
-        .toList();
-  }
-
-  /// Limpia el paciente actual
-  void clearCurrentPaciente() {
-    currentPaciente = null;
-    notifyListeners();
-  }
-
-  /// Limpia los mensajes de error
   void clearError() {
     errorMessage = null;
     notifyListeners();

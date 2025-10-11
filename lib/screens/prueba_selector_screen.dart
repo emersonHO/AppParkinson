@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../viewmodels/login_viewmodel.dart';
 import '../viewmodels/prueba_viewmodel.dart';
 
 class PruebaSelectorScreen extends StatelessWidget {
@@ -7,6 +8,39 @@ class PruebaSelectorScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final pruebaViewModel = Provider.of<PruebaViewModel>(context, listen: false);
+    final loginViewModel = Provider.of<LoginViewModel>(context, listen: false);
+
+    // Corregido: Usar 'id', que es la propiedad correcta del modelo Paciente en Dart
+    final pacienteId = loginViewModel.currentUser?.paciente?.id ?? 0;
+
+    final pruebas = [
+      {
+        'tipo': 'Tapping',
+        'descripcion': 'Toca la pantalla rítmicamente para evaluar coordinación',
+        'icono': Icons.touch_app,
+        'color': Colors.green,
+      },
+      {
+        'tipo': 'Espiral',
+        'descripcion': 'Dibuja una espiral para evaluar control motor fino',
+        'icono': Icons.edit,
+        'color': Colors.blue,
+      },
+      {
+        'tipo': 'Voz',
+        'descripcion': 'Grabación de voz para análisis de patrones del habla',
+        'icono': Icons.mic,
+        'color': Colors.orange,
+      },
+      {
+        'tipo': 'Cuestionario',
+        'descripcion': 'Preguntas sobre síntomas y estado general',
+        'icono': Icons.quiz,
+        'color': Colors.purple,
+      },
+    ];
+
     return Scaffold(
       appBar: AppBar(
         title: const Text("Seleccionar Prueba"),
@@ -32,46 +66,22 @@ class PruebaSelectorScreen extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 24),
-            
             Expanded(
               child: GridView.count(
                 crossAxisCount: 2,
                 crossAxisSpacing: 16,
                 mainAxisSpacing: 16,
-                children: [
-                  _buildPruebaCard(
+                children: pruebas.map((prueba) {
+                  return _buildPruebaCard(
                     context,
-                    "Espiral",
-                    "Dibuja una espiral para evaluar control motor fino",
-                    Icons.edit,
-                    Colors.blue,
-                    "espiral",
-                  ),
-                  _buildPruebaCard(
-                    context,
-                    "Tapping",
-                    "Toca la pantalla rítmicamente para evaluar coordinación",
-                    Icons.touch_app,
-                    Colors.green,
-                    "tapping",
-                  ),
-                  _buildPruebaCard(
-                    context,
-                    "Voz",
-                    "Grabación de voz para análisis de patrones del habla",
-                    Icons.mic,
-                    Colors.orange,
-                    "voz",
-                  ),
-                  _buildPruebaCard(
-                    context,
-                    "Cuestionario",
-                    "Preguntas sobre síntomas y estado general",
-                    Icons.quiz,
-                    Colors.purple,
-                    "cuestionario",
-                  ),
-                ],
+                    prueba['tipo'] as String,
+                    prueba['descripcion'] as String,
+                    prueba['icono'] as IconData,
+                    prueba['color'] as Color,
+                    pacienteId,
+                    pruebaViewModel,
+                  );
+                }).toList(),
               ),
             ),
           ],
@@ -81,15 +91,60 @@ class PruebaSelectorScreen extends StatelessWidget {
   }
 
   Widget _buildPruebaCard(
-    BuildContext context,
-    String title,
-    String description,
-    IconData icon,
-    Color color,
-    String tipo,
-  ) {
+      BuildContext context,
+      String tipo,
+      String descripcion,
+      IconData icono,
+      Color color,
+      int pacienteId,
+      PruebaViewModel pruebaViewModel,
+      ) {
     return InkWell(
-      onTap: () => _iniciarPrueba(context, tipo),
+      onTap: () async {
+        if (pacienteId == 0) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Error: No se pudo identificar al paciente.')),
+          );
+          return;
+        }
+
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: Text("Iniciar Prueba: $tipo"),
+            content: Text("¿Está listo para comenzar la prueba de $tipo?"),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text("Cancelar"),
+              ),
+              ElevatedButton(
+                onPressed: () async {
+                  Navigator.pop(context);
+
+                  final success = await pruebaViewModel.iniciarPrueba(tipo, pacienteId);
+
+                  if (success && context.mounted) {
+                    Navigator.pushNamed(
+                      context,
+                      '/prueba_ejecucion',
+                      arguments: {'tipo': tipo},
+                    );
+                  } else if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text("Error al iniciar la prueba"),
+                        backgroundColor: Colors.red,
+                      ),
+                    );
+                  }
+                },
+                child: const Text("Iniciar"),
+              ),
+            ],
+          ),
+        );
+      },
       borderRadius: BorderRadius.circular(12),
       child: Container(
         padding: const EdgeInsets.all(16),
@@ -115,11 +170,11 @@ class PruebaSelectorScreen extends StatelessWidget {
                 color: color.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(50),
               ),
-              child: Icon(icon, color: color, size: 32),
+              child: Icon(icono, color: color, size: 32),
             ),
             const SizedBox(height: 12),
             Text(
-              title,
+              tipo,
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
@@ -129,7 +184,7 @@ class PruebaSelectorScreen extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             Text(
-              description,
+              descripcion,
               style: const TextStyle(
                 fontSize: 12,
                 color: Colors.grey,
@@ -138,48 +193,6 @@ class PruebaSelectorScreen extends StatelessWidget {
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  void _iniciarPrueba(BuildContext context, String tipo) {
-    final pruebaViewModel = Provider.of<PruebaViewModel>(context, listen: false);
-    
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text("Iniciar Prueba: $tipo"),
-        content: Text("¿Está listo para comenzar la prueba de $tipo?"),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text("Cancelar"),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              Navigator.pop(context);
-              
-              // Iniciar la prueba
-              final success = await pruebaViewModel.iniciarPrueba(tipo);
-              
-              if (success && context.mounted) {
-                Navigator.pushNamed(
-                  context,
-                  '/prueba_ejecucion',
-                  arguments: {'tipo': tipo},
-                );
-              } else if (context.mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text("Error al iniciar la prueba"),
-                    backgroundColor: Colors.red,
-                  ),
-                );
-              }
-            },
-            child: const Text("Iniciar"),
-          ),
-        ],
       ),
     );
   }

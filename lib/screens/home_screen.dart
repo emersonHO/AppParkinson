@@ -17,14 +17,15 @@ class _HomeScreenState extends State<HomeScreen> {
     super.initState();
     // Cargar datos al inicializar
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      Provider.of<PruebaViewModel>(context, listen: false).loadPruebas();
+      // Corregido: loadResultados en lugar de loadPruebas
+      Provider.of<PruebaViewModel>(context, listen: false).loadResultados(); 
       Provider.of<ResultadoViewModel>(context, listen: false).loadResultados();
     });
   }
 
   Future<void> _logout(BuildContext context) async {
-    final authViewModel = Provider.of<AuthViewModel>(context, listen: false);
-    authViewModel.logout();
+    final loginViewModel = Provider.of<LoginViewModel>(context, listen: false);
+    loginViewModel.logout();
     if (context.mounted) {
       Navigator.pushReplacementNamed(context, '/login');
     }
@@ -45,9 +46,9 @@ class _HomeScreenState extends State<HomeScreen> {
           )
         ],
       ),
-      body: Consumer3<AuthViewModel, PruebaViewModel, ResultadoViewModel>(
-        builder: (context, authViewModel, pruebaViewModel, resultadoViewModel, child) {
-          final user = authViewModel.currentUser;
+      body: Consumer3<LoginViewModel, PruebaViewModel, ResultadoViewModel>(
+        builder: (context, loginViewModel, pruebaViewModel, resultadoViewModel, child) {
+          final user = loginViewModel.currentUser;
           final stats = pruebaViewModel.getEstadisticas();
           final resultStats = resultadoViewModel.getEstadisticas();
 

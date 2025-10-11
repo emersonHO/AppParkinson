@@ -1,35 +1,32 @@
 class Paciente {
   final int id;
-  final String nombre;
-  final int edad;
-  final String genero; // M, F
+  final int? edad;
+  final String? genero;
   final String? fechaDiagnostico;
-  final String contactoEmergencia;
+  final String? contactoEmergencia;
 
   Paciente({
     required this.id,
-    required this.nombre,
-    required this.edad,
-    required this.genero,
+    this.edad,
+    this.genero,
     this.fechaDiagnostico,
-    required this.contactoEmergencia,
+    this.contactoEmergencia,
   });
 
   factory Paciente.fromJson(Map<String, dynamic> json) {
     return Paciente(
-      id: json['id'] ?? 0,
-      nombre: json['nombre'] ?? '',
-      edad: json['edad'] ?? 0,
-      genero: json['genero'] ?? 'M',
+      // Correcto: Mapear la clave del JSON 'paciente_id' a la propiedad 'id' de Dart
+      id: json['paciente_id'] ?? 0,
+      edad: json['edad'],
+      genero: json['genero'],
       fechaDiagnostico: json['fecha_diagnostico'],
-      contactoEmergencia: json['contacto_emergencia'] ?? '',
+      contactoEmergencia: json['contacto_emergencia'],
     );
   }
 
   Map<String, dynamic> toJson() {
     return {
-      'id': id,
-      'nombre': nombre,
+      'paciente_id': id,
       'edad': edad,
       'genero': genero,
       'fecha_diagnostico': fechaDiagnostico,
