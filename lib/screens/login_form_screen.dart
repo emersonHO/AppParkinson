@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:provider/provider.dart';
+import '../viewmodels/login_viewmodel.dart';
 
 class LoginFormScreen extends StatefulWidget {
   const LoginFormScreen({super.key});
@@ -10,70 +11,258 @@ class LoginFormScreen extends StatefulWidget {
 
 class _LoginFormScreenState extends State<LoginFormScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _emailController = TextEditingController();
-  final _passwordController = TextEditingController();
-  bool _loading = false;
-  String? _error;
+  final _correoController = TextEditingController();
+  final _contraseniaController = TextEditingController();
+
+  @override
+  void dispose() {
+    _correoController.dispose();
+    _contraseniaController.dispose();
+    super.dispose();
+  }
 
   Future<void> _login() async {
     if (!_formKey.currentState!.validate()) return;
-    setState(() {
-      _loading = true;
-      _error = null;
-    });
-    await Future.delayed(const Duration(seconds: 2)); // Simulación red
 
-    if (_emailController.text == "test@test.com" &&
-        _passwordController.text == "123456") {
-      SharedPreferences prefs = await SharedPreferences.getInstance();
-      await prefs.setBool('session_active', true);
-      if (!mounted) return;
+    final authViewModel = Provider.of<AuthViewModel>(context, listen: false);
+    authViewModel.updateCorreo(_correoController.text);
+    authViewModel.updateContrasenia(_contraseniaController.text);
+
+    final success = await authViewModel.validateLogin();
+
+    if (success && mounted) {
       Navigator.pushReplacementNamed(context, '/home');
-    } else {
-      setState(() {
-        _error = "Credenciales incorrectas";
-      });
     }
-    setState(() {
-      _loading = false;
-    });
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("Iniciar Sesión")),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            children: [
-              TextFormField(
-                controller: _emailController,
-                decoration: const InputDecoration(labelText: "Correo"),
-                validator: (value) =>
-                value == null || value.isEmpty ? "Campo requerido" : null,
-              ),
-              TextFormField(
-                controller: _passwordController,
-                decoration: const InputDecoration(labelText: "Contraseña"),
-                obscureText: true,
-                validator: (value) =>
-                value == null || value.isEmpty ? "Campo requerido" : null,
-              ),
-              const SizedBox(height: 20),
-              if (_error != null)
-                Text(_error!, style: const TextStyle(color: Colors.red)),
-              const SizedBox(height: 20),
-              ElevatedButton(
-                onPressed: _loading ? null : _login,
-                child: _loading
-                    ? const CircularProgressIndicator(color: Colors.white)
-                    : const Text("Entrar"),
-              )
-            ],
+      // Fondo con degradado suave
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [Color(0xFFE3F2FD), Color(0xFFBBDEFB)],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
           ),
+        ),
+        child: Consumer<AuthViewModel>(
+          builder: (context, authViewModel, child) {
+            return Center(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.symmetric(horizontal: 24.0),
+                child: Container(
+                  padding: const EdgeInsets.all(24),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(20),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black12.withOpacity(0.1),
+                        blurRadius: 10,
+                        spreadRadius: 2,
+                        offset: const Offset(0, 5),
+                      )
+                    ],
+                  ),
+                  child: Form(
+                    key: _formKey,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Image.asset(
+                          '../../assets/images/app_logo.png',
+                          width: 100,
+                          height: 100,
+                        ),
+                        const SizedBox(height: 16),
+                        const Text(
+                          "Bienvenido de nuevo",
+                          style: TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black87,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        const Text(
+                          "Inicia sesión para continuar explorando nuestra aplicación.",
+                          textAlign: TextAlign.center,
+                          style: TextStyle(fontSize: 14, color: Colors.black54),
+                        ),
+                        const SizedBox(height: 24),
+
+                        // Campo correo
+                        TextFormField(
+                          controller: _correoController,
+                          decoration: InputDecoration(
+                            labelText: "Correo electrónico",
+                            prefixIcon: const Icon(Icons.email_outlined),
+                            filled: true,
+                            fillColor: Colors.grey[50],
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide(color: Colors.blue.shade100),
+                            ),
+                          ),
+                          keyboardType: TextInputType.emailAddress,
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return "Por favor ingresa tu correo.";
+                            }
+                            if (!value.contains('@')) {
+                              return "Correo inválido.";
+                            }
+                            return null;
+                          },
+                          onChanged: authViewModel.updateCorreo,
+                        ),
+                        const SizedBox(height: 16),
+
+                        // Campo contraseña
+                        TextFormField(
+                          controller: _contraseniaController,
+                          obscureText: true,
+                          decoration: InputDecoration(
+                            labelText: "Contraseña",
+                            prefixIcon: const Icon(Icons.lock_outline),
+                            filled: true,
+                            fillColor: Colors.grey[50],
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide(color: Colors.blue.shade100),
+                            ),
+                          ),
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return "Por favor ingresa tu contraseña.";
+                            }
+                            if (value.length < 4) {
+                              return "La contraseña debe tener al menos 4 caracteres.";
+                            }
+                            return null;
+                          },
+                          onChanged: authViewModel.updateContrasenia,
+                        ),
+                        const SizedBox(height: 16),
+
+                        // Mensaje de error
+                        if (authViewModel.errorMessage != null)
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 12),
+                            child: Text(
+                              authViewModel.errorMessage!,
+                              style: const TextStyle(color: Colors.blue),
+                            ),
+                          ),
+
+                        // Botón iniciar sesión
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton(
+                            onPressed: authViewModel.isLoading ? null : _login,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.green,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(vertical: 16),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              elevation: 3,
+                            ),
+                            child: authViewModel.isLoading
+                                ? const SizedBox(
+                              height: 20,
+                              width: 20,
+                              child: CircularProgressIndicator(
+                                color: Colors.white,
+                                strokeWidth: 2,
+                              ),
+                            )
+                                : const Text(
+                              "Iniciar sesión",
+                              style: TextStyle(fontSize: 16),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+
+                        // Botón crear cuenta
+                        SizedBox(
+                          width: double.infinity,
+                          child: TextButton(
+                            onPressed: () {
+                              Navigator.pushNamed(context, '/register_form');
+                            },
+                            style: TextButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(vertical: 16),
+                              backgroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                side: const BorderSide(color: Colors.green),
+                              ),
+                            ),
+                            child: const Text(
+                              "Crear una nueva cuenta",
+                              style: TextStyle(
+                                color: Colors.green,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+
+                        // Línea divisora
+                        Row(
+                          children: const [
+                            Expanded(child: Divider()),
+                            Padding(
+                              padding: EdgeInsets.symmetric(horizontal: 8),
+                              child: Text("o"),
+                            ),
+                            Expanded(child: Divider()),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+
+                        // Botón Google
+                        GestureDetector(
+                          onTap: () {
+                            // Lógica futura para login con Google
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                            decoration: BoxDecoration(
+                              border: Border.all(color: Colors.black12),
+                              borderRadius: BorderRadius.circular(50),
+                              color: Colors.white,
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Image.asset(
+                                  '../../assets/images/google_logo.png',
+                                  width: 24,
+                                  height: 24,
+                                ),
+                                const SizedBox(width: 10),
+                                const Text(
+                                  "Continuar con Google",
+                                  style: TextStyle(color: Colors.black87),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            );
+          },
         ),
       ),
     );

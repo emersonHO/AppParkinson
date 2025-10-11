@@ -20,7 +20,7 @@ class _RegisterFormScreenState extends State<RegisterFormScreen> {
     if (!_formKey.currentState!.validate()) return;
     if (!_acceptPolicies) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Debes aceptar las políticas")),
+        const SnackBar(content: Text("Debes aceptar las políticas de privacidad")),
       );
       return;
     }
@@ -30,51 +30,135 @@ class _RegisterFormScreenState extends State<RegisterFormScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("Crear Cuenta")),
+      backgroundColor: Colors.white,
+      appBar: AppBar(
+        backgroundColor: Colors.green,
+        title: const Text("Crear Cuenta"),
+      ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
         child: Form(
           key: _formKey,
           child: Column(
             children: [
+              const Icon(Icons.person_add_alt_1, size: 64, color: Colors.green),
+              const SizedBox(height: 16),
+
+              const Text(
+                "Regístrate para comenzar",
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black87,
+                ),
+              ),
+              const SizedBox(height: 8),
+
+              const Text(
+                "Completa los datos para crear tu cuenta y disfruta de todos los beneficios.",
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 14, color: Colors.black54),
+              ),
+              const SizedBox(height: 24),
+
+              // Nombre
               TextFormField(
                 controller: _nameController,
-                decoration: const InputDecoration(labelText: "Nombre"),
+                decoration: InputDecoration(
+                  labelText: "Nombre completo",
+                  prefixIcon: const Icon(Icons.person_outline),
+                  filled: true,
+                  fillColor: Colors.white,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: Colors.blue.shade100),
+                  ),
+                ),
                 validator: (value) =>
                 value == null || value.isEmpty ? "Campo requerido" : null,
               ),
+              const SizedBox(height: 16),
+
+              // Email
               TextFormField(
                 controller: _emailController,
-                decoration: const InputDecoration(labelText: "Correo"),
-                validator: (value) =>
-                value == null || value.isEmpty ? "Campo requerido" : null,
+                decoration: InputDecoration(
+                  labelText: "Correo electrónico",
+                  prefixIcon: const Icon(Icons.email_outlined),
+                  filled: true,
+                  fillColor: Colors.white,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: Colors.blue.shade100),
+                  ),
+                ),
+                keyboardType: TextInputType.emailAddress,
+                validator: (value) {
+                  if (value == null || value.isEmpty) return "Campo requerido";
+                  if (!value.contains('@')) return "Correo inválido";
+                  return null;
+                },
               ),
+              const SizedBox(height: 16),
+
+              // Contraseña
               TextFormField(
                 controller: _passwordController,
                 obscureText: true,
-                decoration: const InputDecoration(labelText: "Contraseña"),
-                validator: (value) =>
-                value == null || value.isEmpty ? "Campo requerido" : null,
+                decoration: InputDecoration(
+                  labelText: "Contraseña",
+                  prefixIcon: const Icon(Icons.lock_outline),
+                  filled: true,
+                  fillColor: Colors.white,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: Colors.blue.shade100),
+                  ),
+                ),
+                validator: (value) {
+                  if (value == null || value.isEmpty) return "Campo requerido";
+                  if (value.length < 4) return "Mínimo 4 caracteres";
+                  return null;
+                },
               ),
+              const SizedBox(height: 16),
+
+              // Confirmar Contraseña
               TextFormField(
                 controller: _confirmPasswordController,
                 obscureText: true,
-                decoration:
-                const InputDecoration(labelText: "Confirmar Contraseña"),
+                decoration: InputDecoration(
+                  labelText: "Confirmar Contraseña",
+                  prefixIcon: const Icon(Icons.lock_outline),
+                  filled: true,
+                  fillColor: Colors.white,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: Colors.blue.shade100),
+                  ),
+                ),
                 validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return "Campo requerido";
-                  }
+                  if (value == null || value.isEmpty) return "Campo requerido";
                   if (value != _passwordController.text) {
                     return "Las contraseñas no coinciden";
                   }
                   return null;
                 },
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 24),
+
+              // Dropdown Rol
               DropdownButtonFormField<String>(
                 value: _role,
-                decoration: const InputDecoration(labelText: "Rol"),
+                decoration: InputDecoration(
+                  labelText: "Selecciona tu rol",
+                  filled: true,
+                  fillColor: Colors.white,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: Colors.blue.shade100),
+                  ),
+                ),
                 items: ["Paciente", "Médico", "Investigador"]
                     .map((r) => DropdownMenuItem(value: r, child: Text(r)))
                     .toList(),
@@ -84,20 +168,47 @@ class _RegisterFormScreenState extends State<RegisterFormScreen> {
                   });
                 },
               ),
+              const SizedBox(height: 24),
+
+              // Checkbox de Políticas
               CheckboxListTile(
-                title: const Text("Acepto las políticas de privacidad"),
+                contentPadding: EdgeInsets.zero,
+                title: const Text(
+                  "Acepto las políticas de privacidad y términos de uso",
+                  style: TextStyle(fontSize: 14),
+                ),
                 value: _acceptPolicies,
+                activeColor: Colors.green,
                 onChanged: (val) {
                   setState(() {
                     _acceptPolicies = val ?? false;
                   });
                 },
               ),
-              const SizedBox(height: 16),
-              ElevatedButton(
-                onPressed: _register,
-                child: const Text("Crear Cuenta"),
-              )
+
+              const SizedBox(height: 24),
+
+              // Botón Crear Cuenta
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: _register,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.green,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    elevation: 4,
+                  ),
+                  child: const Text(
+                    "Crear Cuenta",
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 32),
             ],
           ),
         ),
