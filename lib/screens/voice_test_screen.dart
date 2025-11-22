@@ -1,10 +1,7 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:record/record.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:provider/provider.dart';
 import '../services/voice_ml_service.dart';
-import '../viewmodels/login_viewmodel.dart';
 import 'voice_result_screen.dart';
 
 class VoiceTestScreen extends StatefulWidget {

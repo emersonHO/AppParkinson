@@ -1,69 +1,52 @@
 import 'package:flutter/material.dart';
 import '../services/api_service.dart';
-import '../models/resultado.dart';
+import '../models/resultado_prueba.dart';
 
 class PruebaViewModel extends ChangeNotifier {
-  List<Resultado> resultados = [];
-  Resultado? currentResultado;
   bool isLoading = false;
   String? errorMessage;
 
   final ApiService _apiService = ApiService();
 
-  Future<void> loadResultados() async {
+  /// Inicia una nueva prueba creando un registro de resultado pendiente en el backend.
+  Future<ResultadoPrueba?> iniciarPrueba(String tipo, int pacienteId) async {
     isLoading = true;
     errorMessage = null;
     notifyListeners();
-    try {
-      resultados = await _apiService.fetchResultados();
-    } catch (e) {
-      errorMessage = 'Error al cargar resultados: ${e.toString()}';
-    } finally {
-      isLoading = false;
-      notifyListeners();
-    }
-  }
 
-  Future<bool> iniciarPrueba(String tipo, int pacienteId) async {
-    // Corregido: El constructor ahora coincide con el modelo Resultado
-    final nuevoResultado = Resultado(
-      id: 0,
-      pruebaId: 0,
+    final nuevoResultado = ResultadoPrueba(
       pacienteId: pacienteId,
       tipoPrueba: tipo,
       fecha: DateTime.now(),
       nivelRiesgo: 'Pendiente',
-      confianza: 0.0,
-      observaciones: '',
     );
-
-    isLoading = true;
-    errorMessage = null;
-    notifyListeners();
 
     try {
       final resultadoCreado = await _apiService.crearResultado(nuevoResultado);
-      resultados.add(resultadoCreado);
-      return true;
+      return resultadoCreado;
     } catch (e) {
-      errorMessage = 'Error al iniciar prueba: ${e.toString()}';
-      return false;
+      errorMessage = 'Error al iniciar la prueba: ${e.toString()}';
+      return null;
     } finally {
       isLoading = false;
       notifyListeners();
     }
-  }
-
-  Map<String, int> getEstadisticas() {
-    return {
-      'total': resultados.length,
-      'completadas': resultados.where((r) => r.nivelRiesgo != 'Pendiente').length,
-      'pendientes': resultados.where((r) => r.nivelRiesgo == 'Pendiente').length,
-    };
   }
 
   void clearError() {
     errorMessage = null;
     notifyListeners();
+  }
+
+  /// Calcula estadísticas sobre las pruebas (completadas y pendientes).
+  /// Nota: Esta es una implementación simplificada. En producción,
+  /// debería obtener estos datos del backend o de un servicio de datos.
+  Map<String, int> getEstadisticas() {
+    // Implementación simplificada - retorna valores por defecto
+    // En producción, esto debería consultar el backend o un servicio de datos
+    return {
+      'completadas': 0,
+      'pendientes': 0,
+    };
   }
 }

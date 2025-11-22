@@ -24,21 +24,22 @@ class _LoginFormScreenState extends State<LoginFormScreen> {
   Future<void> _login() async {
     if (!_formKey.currentState!.validate()) return;
 
-      final loginViewModel = Provider.of<LoginViewModel>(context, listen: false);
-      loginViewModel.updateCorreo(_correoController.text);
-      loginViewModel.updateContrasenia(_contraseniaController.text);
+    final loginViewModel = Provider.of<LoginViewModel>(context, listen: false);
+    
+    // Se pasan el correo y la contraseña directamente al método
+    final success = await loginViewModel.validateLogin(
+      _correoController.text,
+      _contraseniaController.text,
+    );
 
-      final success = await loginViewModel.validateLogin();
-
-      if (success && mounted) {
-        Navigator.pushReplacementNamed(context, '/home');
-      }
+    if (success && mounted) {
+      Navigator.pushReplacementNamed(context, '/home');
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // Fondo con degradado suave
       body: Container(
         decoration: const BoxDecoration(
           gradient: LinearGradient(
@@ -116,7 +117,6 @@ class _LoginFormScreenState extends State<LoginFormScreen> {
                             }
                             return null;
                           },
-                          onChanged: loginViewModel.updateCorreo,
                         ),
                         const SizedBox(height: 16),
 
@@ -143,7 +143,6 @@ class _LoginFormScreenState extends State<LoginFormScreen> {
                             }
                             return null;
                           },
-                          onChanged: loginViewModel.updateContrasenia,
                         ),
                         const SizedBox(height: 16),
 
@@ -153,7 +152,7 @@ class _LoginFormScreenState extends State<LoginFormScreen> {
                             padding: const EdgeInsets.only(bottom: 12),
                             child: Text(
                               loginViewModel.errorMessage!,
-                              style: const TextStyle(color: Colors.blue),
+                              style: const TextStyle(color: Colors.red),
                             ),
                           ),
 
@@ -209,50 +208,6 @@ class _LoginFormScreenState extends State<LoginFormScreen> {
                                 color: Colors.green,
                                 fontWeight: FontWeight.bold,
                               ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-
-                        // Línea divisora
-                        Row(
-                          children: const [
-                            Expanded(child: Divider()),
-                            Padding(
-                              padding: EdgeInsets.symmetric(horizontal: 8),
-                              child: Text("o"),
-                            ),
-                            Expanded(child: Divider()),
-                          ],
-                        ),
-                        const SizedBox(height: 16),
-
-                        // Botón Google
-                        GestureDetector(
-                          onTap: () {
-                            // Lógica futura para login con Google
-                          },
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                            decoration: BoxDecoration(
-                              border: Border.all(color: Colors.black12),
-                              borderRadius: BorderRadius.circular(50),
-                              color: Colors.white,
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Image.asset(
-                                  'assets/images/google_logo.png',
-                                  width: 24,
-                                  height: 24,
-                                ),
-                                const SizedBox(width: 10),
-                                const Text(
-                                  "Continuar con Google",
-                                  style: TextStyle(color: Colors.black87),
-                                ),
-                              ],
                             ),
                           ),
                         ),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../viewmodels/resultado_viewmodel.dart';
 import '../viewmodels/login_viewmodel.dart';
+import '../models/resultado_prueba.dart';
 
 class PruebaEjecucionScreen extends StatefulWidget {
   const PruebaEjecucionScreen({super.key});
@@ -16,9 +17,9 @@ class _PruebaEjecucionScreenState extends State<PruebaEjecucionScreen> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    // Simulación: obtener el tipo de prueba de los argumentos de la ruta
-    // En una app real, esto vendría del ViewModel de la prueba seleccionada
-    tipoPrueba = ModalRoute.of(context)?.settings.arguments as String? ?? 'tapping';
+    // Obtener el tipo de prueba de los argumentos de la ruta
+    final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+    tipoPrueba = args?['tipo'] as String? ?? 'tapping';
   }
 
   Future<void> _finalizarPrueba() async {
@@ -27,17 +28,59 @@ class _PruebaEjecucionScreenState extends State<PruebaEjecucionScreen> {
     final pacienteId = loginViewModel.currentUser?.paciente?.id ?? 0;
 
     if (pacienteId == 0) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Error: No se pudo identificar al paciente.')),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Error: No se pudo identificar al paciente.')),
+        );
+      }
       return;
     }
 
-    // Corregido: Se pasa el pacienteId a la función de simulación
-    final success = await resultadoViewModel.simularResultado(1, tipoPrueba!, pacienteId);
+    if (tipoPrueba == null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Error: Tipo de prueba no especificado.')),
+        );
+      }
+      return;
+    }
 
-    if (success && mounted) {
-      Navigator.pushReplacementNamed(context, '/resultado');
+    // Crear resultado simulado
+    try {
+      final nuevoResultado = ResultadoPrueba(
+        pacienteId: pacienteId,
+        tipoPrueba: tipoPrueba!,
+        fecha: DateTime.now(),
+        nivelRiesgo: 'Moderado', // Simulado
+        confianza: 75, // Simulado
+        observaciones: 'Resultado simulado de la prueba ${tipoPrueba}.',
+      );
+
+      final success = await resultadoViewModel.crearResultado(nuevoResultado);
+
+      if (success && mounted) {
+        Navigator.pushReplacementNamed(
+          context,
+          '/resultado',
+          arguments: {'tipo': tipoPrueba},
+        );
+      } else if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Error al guardar el resultado'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 
@@ -46,6 +89,8 @@ class _PruebaEjecucionScreenState extends State<PruebaEjecucionScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text('Ejecutando Prueba: ${tipoPrueba ?? ""}'),
+        backgroundColor: Colors.blue[700],
+        foregroundColor: Colors.white,
       ),
       body: Center(
         child: Column(

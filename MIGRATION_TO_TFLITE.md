@@ -150,3 +150,4 @@ assets:
 - [ ] Agregar validación de calidad de audio
 - [ ] Implementar actualización de modelo OTA
 
+

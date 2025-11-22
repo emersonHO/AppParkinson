@@ -1,120 +1,75 @@
 import 'package:flutter/material.dart';
 import '../services/api_service.dart';
-import '../models/resultado.dart';
+import '../models/resultado_prueba.dart';
 
 class ResultadoViewModel extends ChangeNotifier {
-  List<Resultado> resultados = [];
-  Resultado? currentResultado;
-  bool isLoading = false;
-  String? errorMessage;
-
   final ApiService _apiService = ApiService();
 
-  Future<void> loadResultados() async {
-    isLoading = true;
-    errorMessage = null;
+  List<ResultadoPrueba> _resultados = [];
+  List<ResultadoPrueba> get resultados => _resultados;
+
+  bool _isLoading = false;
+  bool get isLoading => _isLoading;
+
+  String? _errorMessage;
+  String? get errorMessage => _errorMessage;
+
+  void _setLoading(bool loading) {
+    _isLoading = loading;
     notifyListeners();
+  }
+
+  void _setError(String? message) {
+    _errorMessage = message;
+    notifyListeners();
+  }
+
+  Future<void> fetchResultados() async {
+    _setLoading(true);
     try {
-      resultados = await _apiService.fetchResultados();
+      _resultados = await _apiService.fetchResultados();
     } catch (e) {
-      errorMessage = 'Error al cargar resultados: ${e.toString()}';
+      _setError("Error al cargar resultados: ${e.toString()}");
     } finally {
-      isLoading = false;
-      notifyListeners();
+      _setLoading(false);
     }
   }
 
-  Future<void> loadResultadosPorPrueba(int pruebaId) async {
-    isLoading = true;
-    errorMessage = null;
-    notifyListeners();
+  Future<void> getResultadosPorPrueba(String tipoPrueba) async {
+    _setLoading(true);
     try {
-      resultados = await _apiService.getResultadosPorPrueba(pruebaId);
+      final todosLosResultados = await _apiService.fetchResultados();
+      _resultados = todosLosResultados.where((r) => r.tipoPrueba == tipoPrueba).toList();
     } catch (e) {
-      errorMessage = 'Error al cargar resultados: ${e.toString()}';
+      _setError("Error al filtrar resultados: ${e.toString()}");
     } finally {
-      isLoading = false;
-      notifyListeners();
+      _setLoading(false);
     }
   }
 
-  Future<bool> crearResultado(Resultado resultado) async {
-    isLoading = true;
-    errorMessage = null;
-    notifyListeners();
+  Future<bool> crearResultado(ResultadoPrueba resultado) async {
+    _setLoading(true);
     try {
       final nuevoResultado = await _apiService.crearResultado(resultado);
-      resultados.add(nuevoResultado);
+      _resultados.add(nuevoResultado);
+      _setLoading(false);
       return true;
     } catch (e) {
-      errorMessage = 'Error al crear resultado: ${e.toString()}';
+      _setError("Error al crear el resultado: ${e.toString()}");
+      _setLoading(false);
       return false;
-    } finally {
-      isLoading = false;
-      notifyListeners();
     }
   }
 
-  Future<bool> simularResultado(int pruebaId, String tipo, int pacienteId) async {
-    isLoading = true;
-    errorMessage = null;
-    notifyListeners();
-    try {
-      await Future.delayed(const Duration(seconds: 2));
-      final resultado = _generarResultadoSimulado(pruebaId, tipo, pacienteId);
-      resultados.add(resultado);
-      return true;
-    } catch (e) {
-      errorMessage = 'Error al procesar resultado: ${e.toString()}';
-      return false;
-    } finally {
-      isLoading = false;
-      notifyListeners();
-    }
-  }
-
-  Resultado _generarResultadoSimulado(int pruebaId, String tipo, int pacienteId) {
-    final random = DateTime.now().millisecondsSinceEpoch % 100;
-    String nivelRiesgo;
-    double confianza;
-    String observaciones;
-
-    // Lógica de simulación...
-    nivelRiesgo = 'bajo';
-    confianza = 80.0;
-    observaciones = 'Resultado simulado.';
-
-    // Corregido: Se añaden todos los campos requeridos
-    return Resultado(
-      id: resultados.length + 1,
-      pruebaId: pruebaId,
-      pacienteId: pacienteId, // Añadido
-      tipoPrueba: tipo, // Añadido
-      fecha: DateTime.now(), // Añadido
-      nivelRiesgo: nivelRiesgo,
-      confianza: confianza,
-      observaciones: observaciones,
-    );
-  }
-
-  // El resto de los métodos no necesitan cambios...
-
-  Map<String, dynamic> getEstadisticas() {
-    if (resultados.isEmpty) {
-      return {
-        'total': 0,
-        'bajo': 0,
-        'moderado': 0,
-        'alto': 0,
-        'confianzaPromedio': 0.0,
-      };
+  /// Añadido: Calcula estadísticas sobre los niveles de riesgo.
+  Map<String, int> getEstadisticas() {
+    if (_resultados.isEmpty) {
+      return {'bajo': 0, 'medio': 0, 'alto': 0};
     }
     return {
-      'total': resultados.length,
-      'bajo': resultados.where((r) => r.nivelRiesgo == 'bajo').length,
-      'moderado': resultados.where((r) => r.nivelRiesgo == 'moderado').length,
-      'alto': resultados.where((r) => r.nivelRiesgo == 'alto').length,
-      'confianzaPromedio': resultados.map((r) => r.confianza).reduce((a, b) => a + b) / resultados.length,
+      'bajo': _resultados.where((r) => r.nivelRiesgo?.toLowerCase() == 'bajo').length,
+      'medio': _resultados.where((r) => r.nivelRiesgo?.toLowerCase() == 'medio').length,
+      'alto': _resultados.where((r) => r.nivelRiesgo?.toLowerCase() == 'alto').length,
     };
   }
 }

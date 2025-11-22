@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../viewmodels/resultado_viewmodel.dart';
+import '../models/resultado_prueba.dart';
 
 class ResultadoScreen extends StatefulWidget {
   const ResultadoScreen({super.key});
@@ -71,11 +72,12 @@ class _ResultadoScreenState extends State<ResultadoScreen> {
     );
   }
 
-  Widget _buildResultadoCard(resultado) {
+  Widget _buildResultadoCard(ResultadoPrueba resultado) {
     Color colorRiesgo;
     IconData iconRiesgo;
     
-    switch (resultado.nivelRiesgo.toLowerCase()) {
+    final nivelRiesgo = resultado.nivelRiesgo?.toLowerCase() ?? 'desconocido';
+    switch (nivelRiesgo) {
       case 'bajo':
         colorRiesgo = Colors.green;
         iconRiesgo = Icons.check_circle;
@@ -110,7 +112,7 @@ class _ResultadoScreenState extends State<ResultadoScreen> {
           Icon(iconRiesgo, size: 64, color: colorRiesgo),
           const SizedBox(height: 16),
           Text(
-            "Nivel de Riesgo: ${resultado.nivelRiesgo.toUpperCase()}",
+            "Nivel de Riesgo: ${(resultado.nivelRiesgo ?? 'Desconocido').toUpperCase()}",
             style: TextStyle(
               fontSize: 24,
               fontWeight: FontWeight.bold,
@@ -119,7 +121,7 @@ class _ResultadoScreenState extends State<ResultadoScreen> {
           ),
           const SizedBox(height: 8),
           Text(
-            "Confianza: ${resultado.confianza.toStringAsFixed(1)}%",
+            "Confianza: ${resultado.confianza ?? 0}%",
             style: TextStyle(
               fontSize: 18,
               color: colorRiesgo.withOpacity(0.8),
@@ -135,7 +137,7 @@ class _ResultadoScreenState extends State<ResultadoScreen> {
             ),
             child: FractionallySizedBox(
               alignment: Alignment.centerLeft,
-              widthFactor: resultado.confianza / 100,
+              widthFactor: (resultado.confianza ?? 0) / 100.0,
               child: Container(
                 decoration: BoxDecoration(
                   color: colorRiesgo,
@@ -149,7 +151,7 @@ class _ResultadoScreenState extends State<ResultadoScreen> {
     );
   }
 
-  Widget _buildDetallesCard(resultado) {
+  Widget _buildDetallesCard(ResultadoPrueba resultado) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(20),
@@ -184,7 +186,7 @@ class _ResultadoScreenState extends State<ResultadoScreen> {
           ),
           const SizedBox(height: 16),
           Text(
-            resultado.observaciones,
+            resultado.observaciones ?? 'No hay observaciones disponibles',
             style: const TextStyle(
               fontSize: 16,
               height: 1.5,
@@ -214,7 +216,10 @@ class _ResultadoScreenState extends State<ResultadoScreen> {
     );
   }
 
-  Widget _buildRecomendacionesCard(resultado) {
+  Widget _buildRecomendacionesCard(ResultadoPrueba resultado) {
+    // Generar recomendaciones basadas en el nivel de riesgo
+    String recomendacion = _getRecomendacionPorNivel(resultado.nivelRiesgo);
+    
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(20),
@@ -249,7 +254,7 @@ class _ResultadoScreenState extends State<ResultadoScreen> {
           ),
           const SizedBox(height: 16),
           Text(
-            resultado.recomendacion,
+            recomendacion,
             style: const TextStyle(
               fontSize: 16,
               height: 1.5,
@@ -258,6 +263,19 @@ class _ResultadoScreenState extends State<ResultadoScreen> {
         ],
       ),
     );
+  }
+
+  String _getRecomendacionPorNivel(String? nivelRiesgo) {
+    switch (nivelRiesgo?.toLowerCase()) {
+      case 'bajo':
+        return 'Su evaluación muestra un riesgo bajo. Se recomienda mantener un seguimiento regular y continuar con hábitos saludables.';
+      case 'medio':
+        return 'Se detectó un riesgo moderado. Se recomienda consultar con un especialista para una evaluación más detallada y seguimiento médico.';
+      case 'alto':
+        return 'Se detectó un riesgo alto. Es importante consultar con un neurólogo o especialista en Parkinson lo antes posible para una evaluación completa.';
+      default:
+        return 'Se recomienda consultar con un profesional de la salud para una evaluación completa de sus síntomas.';
+    }
   }
 
   Widget _buildAccionesCard() {

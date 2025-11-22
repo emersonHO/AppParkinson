@@ -1,10 +1,24 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../viewmodels/prueba_viewmodel.dart';
+import '../viewmodels/resultado_viewmodel.dart';
 import '../viewmodels/login_viewmodel.dart';
-import '../models/resultado.dart';
+import '../models/resultado_prueba.dart';
 import '../models/voice_test.dart';
 import '../services/database_service.dart';
+
+enum _HistorialItemType { voice, result }
+
+class _HistorialItem {
+  final _HistorialItemType type;
+  final VoiceTest? voiceTest;
+  final ResultadoPrueba? resultado;
+
+  _HistorialItem({
+    required this.type,
+    this.voiceTest,
+    this.resultado,
+  });
+}
 
 class HistorialScreen extends StatefulWidget {
   const HistorialScreen({super.key});
@@ -21,7 +35,7 @@ class _HistorialScreenState extends State<HistorialScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      Provider.of<PruebaViewModel>(context, listen: false).loadResultados();
+      Provider.of<ResultadoViewModel>(context, listen: false).fetchResultados();
       _loadVoiceTests();
     });
   }
@@ -59,48 +73,25 @@ class _HistorialScreenState extends State<HistorialScreen> {
         backgroundColor: Colors.blue[700],
         foregroundColor: Colors.white,
       ),
-      body: Consumer<PruebaViewModel>(
-        builder: (context, pruebaViewModel, child) {
-          if (pruebaViewModel.isLoading) {
+      body: Consumer<ResultadoViewModel>(
+        builder: (context, resultadoViewModel, child) {
+          if (resultadoViewModel.isLoading) {
             return const Center(child: CircularProgressIndicator());
           }
 
-          if (pruebaViewModel.errorMessage != null) {
-            return Center(child: Text(pruebaViewModel.errorMessage!));
+          if (resultadoViewModel.errorMessage != null) {
+            return Center(child: Text(resultadoViewModel.errorMessage!));
           }
 
-          if (pruebaViewModel.resultados.isEmpty) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.history, size: 64, color: Colors.grey[400]),
-                  const SizedBox(height: 16),
-                  Text(
-                    "No hay evaluaciones registradas",
-                    style: TextStyle(fontSize: 18, color: Colors.grey[600]),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    "Realice su primera evaluación para ver el historial",
-                    style: TextStyle(fontSize: 14, color: Colors.grey[500]),
-                  ),
-                  const SizedBox(height: 24),
-                  ElevatedButton.icon(
-                    onPressed: () => Navigator.pushNamed(context, '/prueba_selector'),
-                    icon: const Icon(Icons.play_arrow),
-                    label: const Text("Iniciar Evaluación"),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.blue[600],
-                      foregroundColor: Colors.white,
-                    ),
-                  ),
-                ],
-              ),
-            );
-          }
+          // Ordenar pruebas de voz por fecha (más recientes primero)
+          final sortedVoiceTests = List<VoiceTest>.from(_voiceTests)
+            ..sort((a, b) => b.date.compareTo(a.date));
+          
+          // Ordenar resultados por fecha (más recientes primero)
+          final sortedResultados = List<ResultadoPrueba>.from(resultadoViewModel.resultados)
+            ..sort((a, b) => b.fecha.compareTo(a.fecha));
 
-          final totalItems = pruebaViewModel.resultados.length + _voiceTests.length;
+          final totalItems = sortedResultados.length + sortedVoiceTests.length;
 
           if (totalItems == 0) {
             return Center(
@@ -137,19 +128,47 @@ class _HistorialScreenState extends State<HistorialScreen> {
             padding: const EdgeInsets.all(16),
             itemCount: totalItems,
             itemBuilder: (context, index) {
-              // Mostrar primero las pruebas de voz, luego las otras
-              if (index < _voiceTests.length) {
-                final voiceTest = _voiceTests[index];
-                return _buildVoiceTestCard(voiceTest);
+              // Combinar y ordenar todos los resultados por fecha
+              final allItems = <_HistorialItem>[];
+              
+              // Agregar pruebas de voz
+              for (var test in sortedVoiceTests) {
+                allItems.add(_HistorialItem(
+                  type: _HistorialItemType.voice,
+                  voiceTest: test,
+                ));
               }
               
-              final resultadoIndex = index - _voiceTests.length;
-              final Resultado resultado = pruebaViewModel.resultados[resultadoIndex];
+              // Agregar otros resultados
+              for (var resultado in sortedResultados) {
+                allItems.add(_HistorialItem(
+                  type: _HistorialItemType.result,
+                  resultado: resultado,
+                ));
+              }
+              
+              // Ordenar por fecha (más recientes primero)
+              allItems.sort((a, b) {
+                final dateA = a.type == _HistorialItemType.voice
+                    ? DateTime.parse(a.voiceTest!.date)
+                    : a.resultado!.fecha;
+                final dateB = b.type == _HistorialItemType.voice
+                    ? DateTime.parse(b.voiceTest!.date)
+                    : b.resultado!.fecha;
+                return dateB.compareTo(dateA);
+              });
+              
+              final item = allItems[index];
+              
+              if (item.type == _HistorialItemType.voice) {
+                return _buildVoiceTestCard(item.voiceTest!);
+              } else {
+                final ResultadoPrueba resultado = item.resultado!;
 
-              Color colorRiesgo;
-              IconData iconRiesgo;
+                Color colorRiesgo;
+                IconData iconRiesgo;
 
-              switch (resultado.nivelRiesgo.toLowerCase()) {
+              switch (resultado.nivelRiesgo?.toLowerCase()) {
                 case 'bajo':
                   colorRiesgo = Colors.green;
                   iconRiesgo = Icons.check_circle;
@@ -200,7 +219,7 @@ class _HistorialScreenState extends State<HistorialScreen> {
                               ),
                               const SizedBox(height: 4),
                               Text(
-                                "Riesgo: ${resultado.nivelRiesgo.toUpperCase()}",
+                                "Riesgo: ${resultado.nivelRiesgo?.toUpperCase()}",
                                 style: TextStyle(
                                   fontSize: 14,
                                   color: colorRiesgo,
@@ -224,6 +243,7 @@ class _HistorialScreenState extends State<HistorialScreen> {
                   ),
                 ),
               );
+              }
             },
           );
         },
@@ -235,7 +255,8 @@ class _HistorialScreenState extends State<HistorialScreen> {
     Color colorRiesgo;
     IconData iconRiesgo;
 
-    switch (voiceTest.level.toLowerCase()) {
+    final level = voiceTest.level.toLowerCase();
+    switch (level) {
       case 'bajo':
         colorRiesgo = Colors.green;
         iconRiesgo = Icons.check_circle;

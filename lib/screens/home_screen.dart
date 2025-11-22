@@ -17,9 +17,7 @@ class _HomeScreenState extends State<HomeScreen> {
     super.initState();
     // Cargar datos al inicializar
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      // Corregido: loadResultados en lugar de loadPruebas
-      Provider.of<PruebaViewModel>(context, listen: false).loadResultados(); 
-      Provider.of<ResultadoViewModel>(context, listen: false).loadResultados();
+      Provider.of<ResultadoViewModel>(context, listen: false).fetchResultados();
     });
   }
 

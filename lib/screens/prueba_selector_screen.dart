@@ -134,9 +134,9 @@ class PruebaSelectorScreen extends StatelessWidget {
                 onPressed: () async {
                   Navigator.pop(context);
 
-                  final success = await pruebaViewModel.iniciarPrueba(tipo, pacienteId);
+                  final resultado = await pruebaViewModel.iniciarPrueba(tipo, pacienteId);
 
-                  if (success && context.mounted) {
+                  if (resultado != null && context.mounted) {
                     Navigator.pushNamed(
                       context,
                       '/prueba_ejecucion',

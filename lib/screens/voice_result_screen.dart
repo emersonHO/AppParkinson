@@ -1,7 +1,5 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
-import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../models/voice_test.dart';
 import '../services/api_service.dart';
@@ -62,11 +60,12 @@ class _VoiceResultScreenState extends State<VoiceResultScreen> {
     try {
       final loginViewModel = Provider.of<LoginViewModel>(context, listen: false);
       final user = loginViewModel.currentUser;
-      
+
       if (user == null) {
         throw Exception('Usuario no autenticado');
       }
-
+      
+      // Se crea el objeto para la DB local
       final voiceTest = VoiceTest(
         userId: user.id.toString(),
         date: DateTime.now().toIso8601String(),
@@ -95,17 +94,15 @@ class _VoiceResultScreenState extends State<VoiceResultScreen> {
         d2: widget.result['parametros']?['d2']?.toDouble(),
         ppe: widget.result['parametros']?['ppe']?.toDouble(),
       );
-
-      // Guardar en base de datos local
+      
       final dbService = DatabaseService();
       await dbService.insertVoiceTest(voiceTest);
 
-      // Intentar guardar en backend
+      // Guardar en backend si está disponible
       try {
         final apiService = ApiService();
-        await apiService.saveVoiceResult(voiceTest);
+        await apiService.saveVoiceResult(user.id.toString(), widget.result);
       } catch (e) {
-        // Si falla el backend, al menos está guardado localmente
         print('Error guardando en backend: $e');
       }
 
@@ -115,19 +112,13 @@ class _VoiceResultScreenState extends State<VoiceResultScreen> {
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Resultado guardado exitosamente'),
-            backgroundColor: Colors.green,
-          ),
+          const SnackBar(content: Text('Resultado guardado exitosamente')),
         );
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error al guardar: $e'),
-            backgroundColor: Colors.red,
-          ),
+          SnackBar(content: Text('Error al guardar: $e')),
         );
       }
     } finally {
@@ -158,7 +149,6 @@ class _VoiceResultScreenState extends State<VoiceResultScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Tarjeta principal con probabilidad
             Card(
               elevation: 4,
               child: Padding(
@@ -194,26 +184,19 @@ class _VoiceResultScreenState extends State<VoiceResultScreen> {
                               radius: 80,
                             ),
                           ],
-                          sectionsSpace: 2,
-                          centerSpaceRadius: 40,
                         ),
                       ),
                     ),
                     const SizedBox(height: 16),
                     Text(
                       'Probabilidad: ${(probability * 100).toStringAsFixed(2)}%',
-                      style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w500,
-                      ),
+                      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w500),
                     ),
                   ],
                 ),
               ),
             ),
             const SizedBox(height: 24),
-
-            // Parámetros acústicos
             Card(
               elevation: 4,
               child: Padding(
@@ -236,12 +219,7 @@ class _VoiceResultScreenState extends State<VoiceResultScreen> {
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Expanded(
-                              child: Text(
-                                entry.key,
-                                style: const TextStyle(fontSize: 14),
-                              ),
-                            ),
+                            Text(entry.key, style: const TextStyle(fontSize: 14)),
                             Text(
                               entry.value?.toStringAsFixed(4) ?? 'N/A',
                               style: TextStyle(
@@ -259,8 +237,6 @@ class _VoiceResultScreenState extends State<VoiceResultScreen> {
               ),
             ),
             const SizedBox(height: 24),
-
-            // Botón de guardar
             ElevatedButton.icon(
               onPressed: _isSaved || _isSaving ? null : _saveResult,
               icon: _isSaving
@@ -288,8 +264,6 @@ class _VoiceResultScreenState extends State<VoiceResultScreen> {
               ),
             ),
             const SizedBox(height: 16),
-
-            // Botón de volver
             OutlinedButton.icon(
               onPressed: () => Navigator.pop(context),
               icon: const Icon(Icons.arrow_back),
@@ -307,8 +281,4 @@ class _VoiceResultScreenState extends State<VoiceResultScreen> {
     );
   }
 }
-
-
-
-
 

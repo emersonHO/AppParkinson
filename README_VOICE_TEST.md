@@ -243,3 +243,4 @@ El modelo utiliza 22 características acústicas:
 
 
 
+

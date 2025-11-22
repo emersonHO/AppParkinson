@@ -104,15 +104,15 @@ class VoiceMLService {
       // Normalizar características
       final normalizedFeatures = _normalizeFeatures(features);
       
-      // Preparar input para TFLite
+      // Preparar input para TFLite (formato correcto)
       final input = [normalizedFeatures];
       final output = List.generate(1, (_) => List<double>.filled(1, 0.0));
       
       // Ejecutar inferencia
       _interpreter!.run(input, output);
       
-      // Obtener probabilidad
-      final probability = output[0][0] as double;
+      // Obtener probabilidad (asegurar que esté en rango [0, 1])
+      double probability = (output[0][0] as double).clamp(0.0, 1.0);
       
       // Determinar nivel
       String level;
