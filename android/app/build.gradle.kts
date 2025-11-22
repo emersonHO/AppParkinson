@@ -3,6 +3,7 @@ plugins {
     id("kotlin-android")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
+    kotlin("kapt")
 }
 
 android {
@@ -48,8 +49,8 @@ dependencies {
     implementation("org.jetbrains.kotlin:kotlin-stdlib:1.9.0")
 
     // Room
-    val room_version = "2.6.1"
+    val room_version = "2.7.0"
     implementation("androidx.room:room-runtime:$room_version")
-    kapt("androidx.room:room-compiler:$room_version")
     implementation("androidx.room:room-ktx:$room_version")
+    kapt("androidx.room:room-compiler:$room_version")
 }

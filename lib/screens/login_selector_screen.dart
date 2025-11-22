@@ -38,7 +38,7 @@ class LoginSelectorScreen extends StatelessWidget {
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(16),
                       child: Image.asset(
-                        '../../assets/images/app_logo.png',
+                        'assets/images/app_logo.png',
                         fit: BoxFit.contain,
                       ),
                     ),

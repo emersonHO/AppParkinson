@@ -72,7 +72,7 @@ class _LoginFormScreenState extends State<LoginFormScreen> {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Image.asset(
-                          '../../assets/images/app_logo.png',
+                          'assets/images/app_logo.png',
                           width: 100,
                           height: 100,
                         ),
@@ -243,7 +243,7 @@ class _LoginFormScreenState extends State<LoginFormScreen> {
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 Image.asset(
-                                  '../../assets/images/google_logo.png',
+                                  'assets/images/google_logo.png',
                                   width: 24,
                                   height: 24,
                                 ),

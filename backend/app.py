@@ -4,13 +4,19 @@ from flask_migrate import Migrate
 from flask_cors import CORS # <--- 1. IMPORTAR CORS
 import os
 from datetime import datetime
+import pickle
+import sys
+import tempfile
+import werkzeug
+from werkzeug.utils import secure_filename
 
 # ------------------- CONFIGURACIÓN -------------------
 app = Flask(__name__)
 CORS(app) # <--- 2. ACTIVAR CORS PARA TODA LA APP
 
 basedir = os.path.abspath(os.path.dirname(__file__))
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(basedir, 'app.db')
+# app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(basedir, 'app.db')
+app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL').replace("postgres://", "postgresql://", 1)
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)
@@ -127,6 +133,66 @@ class Consentimiento(db.Model):
     politica_version = db.Column(db.String(50))
     permisos_otorgados = db.Column(db.Boolean, default=False)
 
+class VoiceTest(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.String(100), nullable=False)
+    date = db.Column(db.String(50), nullable=False)
+    probability = db.Column(db.Float, nullable=False)
+    level = db.Column(db.String(50), nullable=False)
+    fo = db.Column(db.Float)
+    fhi = db.Column(db.Float)
+    flo = db.Column(db.Float)
+    jitter_percent = db.Column(db.Float)
+    jitter_abs = db.Column(db.Float)
+    rap = db.Column(db.Float)
+    ppq = db.Column(db.Float)
+    ddp = db.Column(db.Float)
+    shimmer = db.Column(db.Float)
+    shimmer_db = db.Column(db.Float)
+    apq3 = db.Column(db.Float)
+    apq5 = db.Column(db.Float)
+    apq = db.Column(db.Float)
+    dda = db.Column(db.Float)
+    nhr = db.Column(db.Float)
+    hnr = db.Column(db.Float)
+    rpde = db.Column(db.Float)
+    dfa = db.Column(db.Float)
+    spread1 = db.Column(db.Float)
+    spread2 = db.Column(db.Float)
+    d2 = db.Column(db.Float)
+    ppe = db.Column(db.Float)
+    
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'user_id': self.user_id,
+            'date': self.date,
+            'probability': self.probability,
+            'level': self.level,
+            'fo': self.fo,
+            'fhi': self.fhi,
+            'flo': self.flo,
+            'jitter_percent': self.jitter_percent,
+            'jitter_abs': self.jitter_abs,
+            'rap': self.rap,
+            'ppq': self.ppq,
+            'ddp': self.ddp,
+            'shimmer': self.shimmer,
+            'shimmer_db': self.shimmer_db,
+            'apq3': self.apq3,
+            'apq5': self.apq5,
+            'apq': self.apq,
+            'dda': self.dda,
+            'nhr': self.nhr,
+            'hnr': self.hnr,
+            'rpde': self.rpde,
+            'dfa': self.dfa,
+            'spread1': self.spread1,
+            'spread2': self.spread2,
+            'd2': self.d2,
+            'ppe': self.ppe
+        }
+
 # ------------------- RUTAS DE LA API -------------------
 
 @app.route('/health', methods=['GET'])
@@ -187,6 +253,149 @@ def handle_resultados():
     else:
         resultados = ResultadoPrueba.query.all()
         return jsonify([r.to_dict() for r in resultados])
+
+# ------------------- ENDPOINTS DE VOZ -------------------
+
+def load_model():
+    """Carga el modelo y el scaler entrenados"""
+    model_path = os.path.join(basedir, 'model.pkl')
+    scaler_path = os.path.join(basedir, 'scaler.pkl')
+    
+    if not os.path.exists(model_path) or not os.path.exists(scaler_path):
+        return None, None
+    
+    try:
+        with open(model_path, 'rb') as f:
+            model = pickle.load(f)
+        with open(scaler_path, 'rb') as f:
+            scaler = pickle.load(f)
+        return model, scaler
+    except Exception as e:
+        print(f"Error cargando modelo: {e}")
+        return None, None
+
+@app.route('/predict_voice', methods=['POST'])
+def predict_voice():
+    """Endpoint para predecir Parkinson desde un archivo de audio"""
+    try:
+        # Verificar que se envió un archivo
+        if 'audio' not in request.files:
+            return jsonify({'error': 'No se recibió archivo de audio'}), 400
+        
+        file = request.files['audio']
+        if file.filename == '':
+            return jsonify({'error': 'Archivo vacío'}), 400
+        
+        # Guardar temporalmente
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.wav') as tmp_file:
+            file.save(tmp_file.name)
+            tmp_path = tmp_file.name
+        
+        try:
+            # Importar extractor de features
+            sys.path.insert(0, os.path.join(basedir, 'scripts'))
+            from extract_features import extract_features
+            
+            # Extraer características
+            features = extract_features(tmp_path)
+            
+            # Cargar modelo y scaler
+            model, scaler = load_model()
+            if model is None or scaler is None:
+                return jsonify({'error': 'Modelo no disponible. Ejecute train_model.py primero'}), 500
+            
+            # Normalizar features
+            features_array = scaler.transform([features])
+            
+            # Predecir
+            prediction = model.predict(features_array)[0]
+            probability = model.predict_proba(features_array)[0][1]  # Probabilidad de Parkinson
+            
+            # Determinar nivel
+            if probability < 0.33:
+                level = "Bajo"
+            elif probability < 0.66:
+                level = "Medio"
+            else:
+                level = "Alto"
+            
+            # Mapear características a nombres
+            feature_names = [
+                'fo', 'fhi', 'flo', 'jitter_percent', 'jitter_abs', 'rap', 'ppq', 'ddp',
+                'shimmer', 'shimmer_db', 'apq3', 'apq5', 'apq', 'dda', 'nhr', 'hnr',
+                'rpde', 'dfa', 'spread1', 'spread2', 'd2', 'ppe'
+            ]
+            
+            parametros = {name: float(value) for name, value in zip(feature_names, features)}
+            
+            return jsonify({
+                'probabilidad': float(probability),
+                'nivel': level,
+                'parametros': parametros
+            }), 200
+            
+        finally:
+            # Eliminar archivo temporal
+            if os.path.exists(tmp_path):
+                os.unlink(tmp_path)
+                
+    except Exception as e:
+        return jsonify({'error': f'Error procesando audio: {str(e)}'}), 500
+
+@app.route('/save_voice_result', methods=['POST'])
+def save_voice_result():
+    """Endpoint para guardar resultado de prueba de voz"""
+    try:
+        data = request.get_json()
+        
+        if not data or not data.get('user_id') or not data.get('probability') or not data.get('level'):
+            return jsonify({'error': 'Faltan datos requeridos'}), 400
+        
+        nuevo_resultado = VoiceTest(
+            user_id=data['user_id'],
+            date=data.get('date', datetime.utcnow().isoformat()),
+            probability=data['probability'],
+            level=data['level'],
+            fo=data.get('parametros', {}).get('fo'),
+            fhi=data.get('parametros', {}).get('fhi'),
+            flo=data.get('parametros', {}).get('flo'),
+            jitter_percent=data.get('parametros', {}).get('jitter_percent'),
+            jitter_abs=data.get('parametros', {}).get('jitter_abs'),
+            rap=data.get('parametros', {}).get('rap'),
+            ppq=data.get('parametros', {}).get('ppq'),
+            ddp=data.get('parametros', {}).get('ddp'),
+            shimmer=data.get('parametros', {}).get('shimmer'),
+            shimmer_db=data.get('parametros', {}).get('shimmer_db'),
+            apq3=data.get('parametros', {}).get('apq3'),
+            apq5=data.get('parametros', {}).get('apq5'),
+            apq=data.get('parametros', {}).get('apq'),
+            dda=data.get('parametros', {}).get('dda'),
+            nhr=data.get('parametros', {}).get('nhr'),
+            hnr=data.get('parametros', {}).get('hnr'),
+            rpde=data.get('parametros', {}).get('rpde'),
+            dfa=data.get('parametros', {}).get('dfa'),
+            spread1=data.get('parametros', {}).get('spread1'),
+            spread2=data.get('parametros', {}).get('spread2'),
+            d2=data.get('parametros', {}).get('d2'),
+            ppe=data.get('parametros', {}).get('ppe')
+        )
+        
+        db.session.add(nuevo_resultado)
+        db.session.commit()
+        
+        return jsonify({'mensaje': 'Resultado guardado', 'resultado': nuevo_resultado.to_dict()}), 201
+        
+    except Exception as e:
+        return jsonify({'error': f'Error guardando resultado: {str(e)}'}), 500
+
+@app.route('/voice_results/<user_id>', methods=['GET'])
+def get_voice_results(user_id):
+    """Obtener resultados de voz de un usuario"""
+    try:
+        resultados = VoiceTest.query.filter_by(user_id=user_id).order_by(VoiceTest.date.desc()).all()
+        return jsonify([r.to_dict() for r in resultados]), 200
+    except Exception as e:
+        return jsonify({'error': f'Error obteniendo resultados: {str(e)}'}), 500
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)

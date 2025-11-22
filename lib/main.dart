@@ -9,6 +9,8 @@ import 'screens/prueba_selector_screen.dart';
 import 'screens/prueba_ejecucion_screen.dart';
 import 'screens/resultado_screen.dart';
 import 'screens/historial_screen.dart';
+import 'screens/voice_test_screen.dart';
+import 'screens/voice_result_screen.dart';
 import 'viewmodels/login_viewmodel.dart';
 import 'viewmodels/paciente_viewmodel.dart';
 import 'viewmodels/prueba_viewmodel.dart';
@@ -73,6 +75,7 @@ class MyApp extends StatelessWidget {
           '/prueba_ejecucion': (context) => const PruebaEjecucionScreen(),
           '/resultado': (context) => const ResultadoScreen(),
           '/historial': (context) => const HistorialScreen(),
+          '/voice_test': (context) => const VoiceTestScreen(),
         },
       ),
     );

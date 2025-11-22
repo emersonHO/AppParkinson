@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../viewmodels/login_viewmodel.dart';
 import '../viewmodels/prueba_viewmodel.dart';
+import 'voice_test_screen.dart';
 
 class PruebaSelectorScreen extends StatelessWidget {
   const PruebaSelectorScreen({super.key});
@@ -108,7 +109,18 @@ class PruebaSelectorScreen extends StatelessWidget {
           return;
         }
 
-        showDialog(
+        // Si es prueba de voz, navegar directamente
+      if (tipo == 'Voz') {
+        if (context.mounted) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const VoiceTestScreen()),
+          );
+        }
+        return;
+      }
+
+      showDialog(
           context: context,
           builder: (context) => AlertDialog(
             title: Text("Iniciar Prueba: $tipo"),

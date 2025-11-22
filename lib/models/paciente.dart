@@ -15,7 +15,7 @@ class Paciente {
 
   factory Paciente.fromJson(Map<String, dynamic> json) {
     return Paciente(
-      // Correcto: Mapear la clave del JSON 'paciente_id' a la propiedad 'id' de Dart
+
       id: json['paciente_id'] ?? 0,
       edad: json['edad'],
       genero: json['genero'],
