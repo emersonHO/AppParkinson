@@ -181,3 +181,5 @@ flask db upgrade
 - UI/UX consistente
 - Manejo de errores robusto
 
+
+
