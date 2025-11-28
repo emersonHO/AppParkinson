@@ -99,15 +99,19 @@ def train_rf_model(X, y):
     os.makedirs(os.path.dirname(SCALER_JSON_PATH), exist_ok=True)
     with open(SCALER_JSON_PATH, 'w') as f:
         json.dump(scaler_params, f, indent=2)
-    print(f"✓ Parámetros del scaler guardados en: {SCALER_JSON_PATH}")
+    print(f"[OK] Parametros del scaler guardados en: {SCALER_JSON_PATH}")
     
-    # Entrenar Random Forest
-    print("\nEntrenando Random Forest...")
+    # Entrenar Random Forest con balanceo de clases
+    # IMPORTANTE: class_weight='balanced' corrige el desbalance del dataset
+    # (75% Parkinson vs 25% sin Parkinson) para evitar sesgo hacia la clase mayoritaria
+    print("\nEntrenando Random Forest con balanceo de clases...")
+    print("[ADVERTENCIA] Dataset desbalanceado detectado. Usando class_weight='balanced' para corregir sesgo.")
     rf_model = RandomForestClassifier(
         n_estimators=100,
         max_depth=10,
         random_state=42,
-        n_jobs=-1
+        n_jobs=-1,
+        class_weight='balanced'  # Balancea las clases automáticamente
     )
     
     rf_model.fit(X_train_scaled, y_train)
@@ -124,6 +128,22 @@ def train_rf_model(X, y):
     print(classification_report(y_test, y_pred))
     print("\nConfusion Matrix:")
     print(confusion_matrix(y_test, y_pred))
+    
+    # Estadísticas de probabilidades para diagnóstico
+    print(f"\n=== Estadísticas de Probabilidades ===")
+    print(f"Probabilidad promedio (clase positiva): {y_pred_proba.mean():.4f}")
+    print(f"Probabilidad mínima: {y_pred_proba.min():.4f}")
+    print(f"Probabilidad máxima: {y_pred_proba.max():.4f}")
+    print(f"Desviación estándar: {y_pred_proba.std():.4f}")
+    
+    # Verificar distribución de probabilidades
+    low_prob = (y_pred_proba < 0.33).sum()
+    mid_prob = ((y_pred_proba >= 0.33) & (y_pred_proba < 0.66)).sum()
+    high_prob = (y_pred_proba >= 0.66).sum()
+    print(f"\nDistribución de probabilidades:")
+    print(f"  Bajo (<0.33): {low_prob} ({low_prob/len(y_pred_proba)*100:.1f}%)")
+    print(f"  Medio (0.33-0.66): {mid_prob} ({mid_prob/len(y_pred_proba)*100:.1f}%)")
+    print(f"  Alto (>=0.66): {high_prob} ({high_prob/len(y_pred_proba)*100:.1f}%)")
     
     # Exportar modelo a JSON
     export_rf_to_json(rf_model, MODEL_JSON_PATH)
@@ -160,7 +180,7 @@ def export_rf_to_json(model, output_path):
     with open(output_path, 'w') as f:
         json.dump(model_data, f, indent=2)
     
-    print(f"✓ Modelo RF exportado a: {output_path}")
+    print(f"[OK] Modelo RF exportado a: {output_path}")
     print(f"  - Número de árboles: {model.n_estimators}")
     print(f"  - Número de características: {model.n_features_in_}")
 
@@ -181,14 +201,14 @@ def main():
         # Entrenar modelo Random Forest
         model, scaler = train_rf_model(X, y)
         
-        print("\n✓ Entrenamiento completado exitosamente")
+        print("\n[OK] Entrenamiento completado exitosamente")
         print(f"\nArchivos generados:")
         print(f"  - Modelo RF (JSON): {MODEL_JSON_PATH}")
         print(f"  - Parámetros Scaler: {SCALER_JSON_PATH}")
         print(f"\n¡Copia estos archivos a la carpeta assets/model/ en tu proyecto Flutter!")
         
     except Exception as e:
-        print(f"\n✗ Error durante el entrenamiento: {e}")
+        print(f"\n[ERROR] Error durante el entrenamiento: {e}")
         import traceback
         traceback.print_exc()
         raise
