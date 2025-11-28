@@ -97,6 +97,7 @@ flutter:
     - assets/images/google_logo.png
     - assets/images/app_logo.png
     - assets/model/parkinson_voice_model.tflite
+    - assets/model/rf_model.json
     - assets/model/scaler_params.json
 
   # To add assets to your application, add an assets section, like this:

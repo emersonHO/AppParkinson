@@ -29,6 +29,19 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  Future<Map<String, dynamic>> _loadDashboardStats(
+    PruebaViewModel pruebaViewModel,
+    ResultadoViewModel resultadoViewModel,
+  ) async {
+    final pruebaStats = await pruebaViewModel.getEstadisticas();
+    final resultStats = await resultadoViewModel.getEstadisticas();
+    
+    return {
+      'pruebaStats': pruebaStats,
+      'resultStats': resultStats,
+    };
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -47,8 +60,21 @@ class _HomeScreenState extends State<HomeScreen> {
       body: Consumer3<LoginViewModel, PruebaViewModel, ResultadoViewModel>(
         builder: (context, loginViewModel, pruebaViewModel, resultadoViewModel, child) {
           final user = loginViewModel.currentUser;
-          final stats = pruebaViewModel.getEstadisticas();
-          final resultStats = resultadoViewModel.getEstadisticas();
+          
+          // Cargar estadísticas de forma asíncrona
+          return FutureBuilder<Map<String, dynamic>>(
+            future: _loadDashboardStats(pruebaViewModel, resultadoViewModel),
+            builder: (context, snapshot) {
+              final stats = snapshot.hasData 
+                  ? snapshot.data!['pruebaStats'] as Map<String, int>
+                  : {'completadas': 0, 'pendientes': 0};
+              final resultStats = snapshot.hasData
+                  ? snapshot.data!['resultStats'] as Map<String, int>
+                  : {'bajo': 0, 'medio': 0, 'alto': 0};
+              
+              if (!snapshot.hasData) {
+                return const Center(child: CircularProgressIndicator());
+              }
 
           return SingleChildScrollView(
             padding: const EdgeInsets.all(16.0),
@@ -229,6 +255,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ],
             ),
+          );
+            },
           );
         },
       ),

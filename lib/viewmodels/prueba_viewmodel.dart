@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../services/api_service.dart';
+import '../services/database_service.dart';
 import '../models/resultado_prueba.dart';
 
 class PruebaViewModel extends ChangeNotifier {
@@ -39,14 +40,24 @@ class PruebaViewModel extends ChangeNotifier {
   }
 
   /// Calcula estadísticas sobre las pruebas (completadas y pendientes).
-  /// Nota: Esta es una implementación simplificada. En producción,
-  /// debería obtener estos datos del backend o de un servicio de datos.
-  Map<String, int> getEstadisticas() {
-    // Implementación simplificada - retorna valores por defecto
-    // En producción, esto debería consultar el backend o un servicio de datos
-    return {
-      'completadas': 0,
-      'pendientes': 0,
-    };
+  /// Obtiene datos reales de la base de datos local.
+  Future<Map<String, int>> getEstadisticas() async {
+    try {
+      final dbService = DatabaseService();
+      
+      // Obtener todas las pruebas de voz
+      final voiceTests = await dbService.getAllVoiceTests();
+      
+      return {
+        'completadas': voiceTests.length,
+        'pendientes': 0, // Las pruebas se completan inmediatamente
+      };
+    } catch (e) {
+      print('Error obteniendo estadísticas: $e');
+      return {
+        'completadas': 0,
+        'pendientes': 0,
+      };
+    }
   }
 }

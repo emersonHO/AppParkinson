@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:record/record.dart';
 import 'package:path_provider/path_provider.dart';
-import '../services/voice_ml_service.dart';
+import '../services/voice_rf_service.dart';
 import 'voice_result_screen.dart';
 
 class VoiceTestScreen extends StatefulWidget {
@@ -121,16 +121,16 @@ class _VoiceTestScreenState extends State<VoiceTestScreen> {
     });
 
     try {
-      // Usar servicio local de ML
-      final mlService = VoiceMLService();
+      // Usar servicio local de Random Forest
+      final rfService = VoiceRFService();
       
       // Inicializar si no está inicializado
-      if (!mlService.isInitialized) {
-        await mlService.initialize();
+      if (!rfService.isInitialized) {
+        await rfService.initialize();
       }
       
-      // Procesar audio localmente
-      final result = await mlService.predict(_audioPath!);
+      // Procesar audio localmente con Random Forest
+      final result = await rfService.predict(_audioPath!);
 
       if (mounted) {
         Navigator.push(
@@ -166,6 +166,41 @@ class _VoiceTestScreenState extends State<VoiceTestScreen> {
     final minutes = twoDigits(duration.inMinutes.remainder(60));
     final seconds = twoDigits(duration.inSeconds.remainder(60));
     return '$minutes:$seconds';
+  }
+
+  Widget _buildInstructionStep(String number, String text, IconData icon) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          width: 32,
+          height: 32,
+          decoration: BoxDecoration(
+            color: Colors.blue[700],
+            shape: BoxShape.circle,
+          ),
+          child: Center(
+            child: Text(
+              number,
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+                fontSize: 16,
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Icon(icon, size: 24, color: Colors.blue[700]),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Text(
+            text,
+            style: const TextStyle(fontSize: 16, height: 1.4),
+          ),
+        ),
+      ],
+    );
   }
 
   @override
@@ -204,25 +239,13 @@ class _VoiceTestScreenState extends State<VoiceTestScreen> {
                       ],
                     ),
                     const SizedBox(height: 16),
-                    const Text(
-                      '1. Presiona el botón de grabar y mantén presionado',
-                      style: TextStyle(fontSize: 16),
-                    ),
-                    const SizedBox(height: 8),
-                    const Text(
-                      '2. Habla claramente durante al menos 3 segundos',
-                      style: TextStyle(fontSize: 16),
-                    ),
-                    const SizedBox(height: 8),
-                    const Text(
-                      '3. Suelta el botón cuando termines',
-                      style: TextStyle(fontSize: 16),
-                    ),
-                    const SizedBox(height: 8),
-                    const Text(
-                      '4. Presiona "Procesar" para analizar tu voz (offline)',
-                      style: TextStyle(fontSize: 16),
-                    ),
+                    _buildInstructionStep('1', 'Presiona el botón grande de abajo para comenzar a grabar', Icons.touch_app),
+                    const SizedBox(height: 12),
+                    _buildInstructionStep('2', 'Habla claramente durante al menos 3 segundos. Di algo como: "Hola, mi nombre es..."', Icons.mic),
+                    const SizedBox(height: 12),
+                    _buildInstructionStep('3', 'Presiona el botón rojo para detener la grabación cuando termines', Icons.stop_circle),
+                    const SizedBox(height: 12),
+                    _buildInstructionStep('4', 'Presiona "Procesar Audio" para analizar tu voz. El análisis se realiza completamente en tu dispositivo (sin internet)', Icons.analytics),
                   ],
                 ),
               ),
@@ -244,11 +267,20 @@ class _VoiceTestScreenState extends State<VoiceTestScreen> {
                       ),
                       const SizedBox(height: 16),
                       Text(
-                        'Grabando...',
+                        '🎤 GRABANDO...',
                         style: TextStyle(
-                          fontSize: 24,
+                          fontSize: 28,
                           fontWeight: FontWeight.bold,
                           color: Colors.red[700],
+                          letterSpacing: 2,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      const Text(
+                        'Habla ahora...',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontStyle: FontStyle.italic,
                         ),
                       ),
                       const SizedBox(height: 8),
@@ -297,15 +329,29 @@ class _VoiceTestScreenState extends State<VoiceTestScreen> {
                   padding: const EdgeInsets.all(16.0),
                   child: Row(
                     children: [
-                      Icon(Icons.check_circle, color: Colors.green[700]),
-                      const SizedBox(width: 8),
+                      Icon(Icons.check_circle, color: Colors.green[700], size: 32),
+                      const SizedBox(width: 12),
                       Expanded(
-                        child: Text(
-                          'Audio grabado correctamente',
-                          style: TextStyle(
-                            color: Colors.green[700],
-                            fontWeight: FontWeight.bold,
-                          ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              '✓ Grabación completada',
+                              style: TextStyle(
+                                color: Colors.green[700],
+                                fontWeight: FontWeight.bold,
+                                fontSize: 18,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Duración: ${_formatDuration(_recordingDuration)}',
+                              style: TextStyle(
+                                color: Colors.green[600],
+                                fontSize: 14,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ],
@@ -317,25 +363,32 @@ class _VoiceTestScreenState extends State<VoiceTestScreen> {
 
             // Botón de procesar
             if (_audioPath != null && !_isRecording)
-              ElevatedButton.icon(
-                onPressed: _isProcessing ? null : _processAudio,
-                icon: _isProcessing
-                    ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                        ),
-                      )
-                    : const Icon(Icons.analytics),
-                label: Text(_isProcessing ? 'Procesando...' : 'Procesar Audio'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.green[600],
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+              SizedBox(
+                height: 60,
+                child: ElevatedButton.icon(
+                  onPressed: _isProcessing ? null : _processAudio,
+                  icon: _isProcessing
+                      ? const SizedBox(
+                          width: 24,
+                          height: 24,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 3,
+                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                          ),
+                        )
+                      : const Icon(Icons.analytics, size: 28),
+                  label: Text(
+                    _isProcessing ? 'Analizando tu voz...' : 'Procesar Audio',
+                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.green[600],
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    elevation: 4,
                   ),
                 ),
               ),

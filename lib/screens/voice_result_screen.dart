@@ -205,7 +205,7 @@ class _VoiceResultScreenState extends State<VoiceResultScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Parámetros Acústicos',
+                      'Resumen del Análisis',
                       style: TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
@@ -213,25 +213,35 @@ class _VoiceResultScreenState extends State<VoiceResultScreen> {
                       ),
                     ),
                     const SizedBox(height: 16),
-                    ...parametros.entries.map((entry) {
-                      return Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 8.0),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(entry.key, style: const TextStyle(fontSize: 14)),
-                            Text(
-                              entry.value?.toStringAsFixed(4) ?? 'N/A',
-                              style: TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.blue[700],
-                              ),
-                            ),
-                          ],
-                        ),
-                      );
-                    }).toList(),
+                    _buildSummarySection(
+                      'Variabilidad de Frecuencia',
+                      'Mide la estabilidad del tono de voz',
+                      [
+                        _buildMetric('Frecuencia Media', parametros['fo'], 'Hz'),
+                        _buildMetric('Variación de Tono', parametros['jitter_percent'], '%'),
+                      ],
+                      Icons.trending_up,
+                    ),
+                    const SizedBox(height: 16),
+                    _buildSummarySection(
+                      'Amplitud y Ruido',
+                      'Evalúa la claridad y estabilidad del volumen',
+                      [
+                        _buildMetric('Variación de Amplitud', parametros['shimmer'], ''),
+                        _buildMetric('Relación Armónico/Ruido', parametros['hnr'], 'dB'),
+                      ],
+                      Icons.volume_up,
+                    ),
+                    const SizedBox(height: 16),
+                    _buildSummarySection(
+                      'Complejidad de la Señal',
+                      'Analiza patrones complejos en la voz',
+                      [
+                        _buildMetric('Entropía de Frecuencia', parametros['rpde'], ''),
+                        _buildMetric('Análisis de Fluctuación', parametros['dfa'], ''),
+                      ],
+                      Icons.analytics,
+                    ),
                   ],
                 ),
               ),
@@ -277,6 +287,68 @@ class _VoiceResultScreenState extends State<VoiceResultScreen> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildSummarySection(String title, String description, List<Widget> metrics, IconData icon) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.grey[50],
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.grey[300]!),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(icon, size: 20, color: Colors.blue[700]),
+              const SizedBox(width: 8),
+              Text(
+                title,
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.blue[700],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Text(
+            description,
+            style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+          ),
+          const SizedBox(height: 8),
+          ...metrics,
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMetric(String label, dynamic value, String unit) {
+    if (value == null) return const SizedBox.shrink();
+    
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4.0),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            label,
+            style: const TextStyle(fontSize: 14),
+          ),
+          Text(
+            '${value.toStringAsFixed(2)} $unit',
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.bold,
+              color: Colors.blue[700],
+            ),
+          ),
+        ],
       ),
     );
   }
