@@ -145,12 +145,14 @@ class VoiceFeatureExtractor {
 
     double ppq = 0.0;
     if (periods.length >= 5) {
-      double sumOfDiffs = 0;
+      final ppqValues = <double>[];
       for (int i = 2; i < periods.length - 2; i++) {
         final localMean = (periods[i - 2] + periods[i - 1] + periods[i] + periods[i + 1] + periods[i + 2]) / 5;
-        sumOfDiffs += (periods[i] - localMean).abs();
+        if (localMean > 0) {
+          ppqValues.add((periods[i] - localMean).abs() / localMean);
+        }
       }
-      ppq = sumOfDiffs / (periods.length - 4);
+      ppq = ppqValues.isNotEmpty ? ppqValues.reduce((a, b) => a + b) / ppqValues.length : 0.0;
     }
 
     double ddp = 0.0;
@@ -195,43 +197,52 @@ class VoiceFeatureExtractor {
     final meanRms = rmsValues.reduce((a, b) => a + b) / rmsValues.length;
     final shimmer = meanRms > 0 ? (ampDiffs.reduce((a, b) => a + b) / ampDiffs.length) / meanRms : 0.0;
     
-    final dbDiffs = <double>[];
-    for (int i = 0; i < rmsValues.length - 1; i++) {
-      if (rmsValues[i] > 0 && rmsValues[i+1] > 0) {
-        final ratio = rmsValues[i+1] / rmsValues[i];
-        dbDiffs.add((20 * (math.log(ratio) / math.ln10)).abs());
+    // MDVP:Shimmer(dB) - Calculado como en Python: 20 * log10(mean(rms[1:]) / mean(rms[:-1]))
+    double shimmerDb = 0.0;
+    if (rmsValues.length >= 2) {
+      final meanRms1 = rmsValues.sublist(1).reduce((a, b) => a + b) / (rmsValues.length - 1);
+      final meanRms0 = rmsValues.sublist(0, rmsValues.length - 1).reduce((a, b) => a + b) / (rmsValues.length - 1);
+      if (meanRms0 > 0) {
+        final ratio = meanRms1 / meanRms0;
+        shimmerDb = 20 * (math.log(ratio) / math.ln10);
+        if (!shimmerDb.isFinite) shimmerDb = 0.0;
       }
     }
-    final shimmerDb = dbDiffs.isNotEmpty ? dbDiffs.reduce((a,b) => a+b) / dbDiffs.length : 0.0;
 
     double apq3 = 0.0;
     if (rmsValues.length >= 3) {
-      double sumOfDiffs = 0;
+      final apq3Values = <double>[];
       for (int i = 1; i < rmsValues.length - 1; i++) {
         final localMean = (rmsValues[i-1] + rmsValues[i] + rmsValues[i+1]) / 3;
-        sumOfDiffs += (rmsValues[i] - localMean).abs();
+        if (localMean > 0) {
+          apq3Values.add((rmsValues[i] - localMean).abs() / localMean);
+        }
       }
-       apq3 = meanRms > 0 ? (sumOfDiffs / (rmsValues.length - 2)) / meanRms : 0.0;
+      apq3 = apq3Values.isNotEmpty ? apq3Values.reduce((a, b) => a + b) / apq3Values.length : 0.0;
     }
 
     double apq5 = 0.0;
     if (rmsValues.length >= 5) {
-      double sumOfDiffs = 0;
+      final apq5Values = <double>[];
       for (int i = 2; i < rmsValues.length - 2; i++) {
         final localMean = (rmsValues[i-2] + rmsValues[i-1] + rmsValues[i] + rmsValues[i+1] + rmsValues[i+2]) / 5;
-        sumOfDiffs += (rmsValues[i] - localMean).abs();
+        if (localMean > 0) {
+          apq5Values.add((rmsValues[i] - localMean).abs() / localMean);
+        }
       }
-       apq5 = meanRms > 0 ? (sumOfDiffs / (rmsValues.length - 4)) / meanRms : 0.0;
+      apq5 = apq5Values.isNotEmpty ? apq5Values.reduce((a, b) => a + b) / apq5Values.length : 0.0;
     }
 
     double apq = 0.0;
     if (rmsValues.length >= 11) {
-      double sumOfDiffs = 0;
+      final apqValues = <double>[];
       for (int i = 5; i < rmsValues.length - 5; i++) {
         final localMean = rmsValues.sublist(i-5, i+6).reduce((a,b) => a+b) / 11;
-        sumOfDiffs += (rmsValues[i] - localMean).abs();
+        if (localMean > 0) {
+          apqValues.add((rmsValues[i] - localMean).abs() / localMean);
+        }
       }
-       apq = meanRms > 0 ? (sumOfDiffs / (rmsValues.length - 10)) / meanRms : 0.0;
+      apq = apqValues.isNotEmpty ? apqValues.reduce((a, b) => a + b) / apqValues.length : 0.0;
     }
 
     double dda = 0.0;

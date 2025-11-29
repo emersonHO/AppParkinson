@@ -8,7 +8,8 @@ import numpy as np
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
-from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
+from sklearn.calibration import CalibratedClassifierCV
+from sklearn.metrics import accuracy_score, classification_report, confusion_matrix, roc_auc_score
 import json
 import os
 import warnings
@@ -116,9 +117,15 @@ def train_rf_model(X, y):
     
     rf_model.fit(X_train_scaled, y_train)
     
-    # Evaluar
-    y_pred = rf_model.predict(X_test_scaled)
-    y_pred_proba = rf_model.predict_proba(X_test_scaled)[:, 1]  # Probabilidad de clase positiva
+    # Calibrar probabilidades para mejorar la confiabilidad
+    # Esto ayuda a que las probabilidades sean más precisas y no estén sesgadas
+    print("\nCalibrando probabilidades del modelo...")
+    calibrated_model = CalibratedClassifierCV(rf_model, method='isotonic', cv=5)
+    calibrated_model.fit(X_train_scaled, y_train)
+    
+    # Evaluar con modelo calibrado
+    y_pred = calibrated_model.predict(X_test_scaled)
+    y_pred_proba = calibrated_model.predict_proba(X_test_scaled)[:, 1]  # Probabilidad de clase positiva
     
     accuracy = accuracy_score(y_test, y_pred)
     
@@ -145,10 +152,32 @@ def train_rf_model(X, y):
     print(f"  Medio (0.33-0.66): {mid_prob} ({mid_prob/len(y_pred_proba)*100:.1f}%)")
     print(f"  Alto (>=0.66): {high_prob} ({high_prob/len(y_pred_proba)*100:.1f}%)")
     
-    # Exportar modelo a JSON
+    # Exportar modelo calibrado a JSON
+    # Nota: La calibración se aplica en tiempo de inferencia, pero necesitamos exportar el modelo base
+    # y los parámetros de calibración. Por simplicidad, exportamos el modelo base y aplicamos
+    # un ajuste de umbral en la inferencia.
     export_rf_to_json(rf_model, MODEL_JSON_PATH)
     
-    return rf_model, scaler
+    # Calcular umbral óptimo usando curva ROC
+    from sklearn.metrics import roc_curve
+    fpr, tpr, thresholds = roc_curve(y_test, y_pred_proba)
+    
+    # Encontrar umbral que maximiza la diferencia entre TPR y FPR (Youden's J statistic)
+    optimal_idx = np.argmax(tpr - fpr)
+    optimal_threshold = thresholds[optimal_idx]
+    
+    print(f"\nUmbral optimo para decision: {optimal_threshold:.4f}")
+    print(f"  (Probabilidades >= {optimal_threshold:.4f} se clasifican como Parkinson)")
+    
+    # Guardar umbral óptimo en scaler_params para uso en Dart
+    scaler_params['optimal_threshold'] = float(optimal_threshold)
+    
+    # Actualizar scaler_params.json con el umbral
+    with open(SCALER_JSON_PATH, 'w') as f:
+        json.dump(scaler_params, f, indent=2)
+    print(f"[OK] Umbral optimo guardado en scaler_params.json")
+    
+    return calibrated_model, scaler
 
 def export_rf_to_json(model, output_path):
     """Exporta el modelo Random Forest a formato JSON para Dart"""

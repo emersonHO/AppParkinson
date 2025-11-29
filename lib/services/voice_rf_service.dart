@@ -269,10 +269,18 @@ class VoiceRFService {
       probability = probability.clamp(0.0, 1.0);
       
       // PASO 4: Clasificar el nivel de riesgo basado en la probabilidad
+      // Usar umbral óptimo si está disponible, sino usar umbrales fijos
+      final optimalThreshold = _scalerParams?['optimal_threshold'] as double?;
+      final threshold = optimalThreshold ?? 0.5;
+      
       String level;
-      if (probability < 0.33) {
+      // Ajustar umbrales basados en el umbral óptimo
+      final lowThreshold = threshold * 0.66;  // 66% del umbral óptimo
+      final highThreshold = threshold * 1.33;  // 133% del umbral óptimo
+      
+      if (probability < lowThreshold) {
         level = 'Bajo';
-      } else if (probability < 0.66) {
+      } else if (probability < highThreshold) {
         level = 'Medio';
       } else {
         level = 'Alto';
