@@ -120,7 +120,8 @@ def train_model(X, y):
         n_estimators=100,
         max_depth=10,
         random_state=42,
-        n_jobs=-1
+        n_jobs=-1,
+        class_weight='balanced'
     )
     
     rf_model.fit(X_train_scaled, y_train)
@@ -150,7 +151,7 @@ def save_model(model, scaler):
     with open(SCALER_PATH, 'wb') as f:
         pickle.dump(scaler, f)
     
-    print("✓ Modelo y scaler guardados exitosamente")
+    print("[OK] Modelo y scaler guardados exitosamente")
 
 def main():
     """
@@ -173,10 +174,10 @@ def main():
         # Guardar modelo
         save_model(model, scaler)
         
-        print("\n✓ Entrenamiento completado exitosamente")
+        print("\n[OK] Entrenamiento completado exitosamente")
         
     except Exception as e:
-        print(f"\n✗ Error durante el entrenamiento: {e}")
+        print(f"\n[ERROR] Error durante el entrenamiento: {e}")
         import traceback
         traceback.print_exc()
         raise

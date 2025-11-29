@@ -298,17 +298,30 @@ def predict_voice():
             
             # Extraer características
             features = extract_features(tmp_path)
+            raw_features = list(features)
             
-            # Cargar modelo y scaler
+            # Cargar modelo, scaler y calibración
             model, scaler = load_model()
             if model is None or scaler is None:
                 return jsonify({'error': 'Modelo no disponible. Ejecute train_model.py primero'}), 500
             
-            # Normalizar features
+            # Normalizar features con clipping para evitar valores fuera de rango
+            if hasattr(scaler, 'mean_') and hasattr(scaler, 'scale_'):
+                mean = scaler.mean_
+                scale = scaler.scale_
+                clipped_features = []
+                for idx, value in enumerate(features):
+                    if idx >= len(mean) or idx >= len(scale) or scale[idx] == 0:
+                        clipped_features.append(value)
+                        continue
+                    lower = mean[idx] - 3 * scale[idx]
+                    upper = mean[idx] + 3 * scale[idx]
+                    clipped_features.append(float(min(max(value, lower), upper)))
+                features = clipped_features
+            
             features_array = scaler.transform([features])
             
             # Predecir
-            prediction = model.predict(features_array)[0]
             probability = model.predict_proba(features_array)[0][1]  # Probabilidad de Parkinson
             
             # Determinar nivel
@@ -326,7 +339,7 @@ def predict_voice():
                 'rpde', 'dfa', 'spread1', 'spread2', 'd2', 'ppe'
             ]
             
-            parametros = {name: float(value) for name, value in zip(feature_names, features)}
+            parametros = {name: float(value) for name, value in zip(feature_names, raw_features)}
             
             return jsonify({
                 'probabilidad': float(probability),

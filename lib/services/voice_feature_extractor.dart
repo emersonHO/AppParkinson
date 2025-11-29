@@ -140,7 +140,8 @@ class VoiceFeatureExtractor {
     final meanDiff = periodDiffs.reduce((a, b) => a + b) / periodDiffs.length;
 
     final jitterPercent = (meanDiff / meanPeriod) * 100;
-    final jitterAbs = meanDiff * sampleRate;
+    // El dataset original usa segundos para jitter_abs, por lo que no debemos escalar por la frecuencia de muestreo.
+    final jitterAbs = meanDiff;
     final rap = meanDiff / meanPeriod;
 
     double ppq = 0.0;

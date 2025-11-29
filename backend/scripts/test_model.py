@@ -7,24 +7,18 @@ import pandas as pd
 import numpy as np
 import json
 import os
-from sklearn.preprocessing import StandardScaler
 
-# Rutas
 DATASET_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'data', 'parkinson_data.data')
 SCALER_JSON_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), '..', 'assets', 'model', 'scaler_params.json')
 MODEL_JSON_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), '..', 'assets', 'model', 'rf_model.json')
 
 def load_model():
-    """Carga el modelo RF desde JSON"""
     with open(MODEL_JSON_PATH, 'r') as f:
-        model_data = json.load(f)
-    return model_data
+        return json.load(f)
 
 def load_scaler():
-    """Carga los parámetros del scaler"""
     with open(SCALER_JSON_PATH, 'r') as f:
-        scaler_params = json.load(f)
-    return scaler_params
+        return json.load(f)
 
 def normalize_features(features, scaler_params):
     """Normaliza características usando StandardScaler"""

@@ -144,9 +144,13 @@ class VoiceRFService {
         print('⚠️ Advertencia: scale[$i] es 0, usando 0.0 como valor normalizado');
         return 0.0;
       }
+
+      final lowerBound = mean[i] - 3 * scale[i];
+      final upperBound = mean[i] + 3 * scale[i];
+      final clampedValue = features[i].clamp(lowerBound, upperBound);
       
       // Fórmula de normalización StandardScaler
-      final normalizedValue = (features[i] - mean[i]) / scale[i];
+      final normalizedValue = (clampedValue - mean[i]) / scale[i];
       
       // Validar que el valor es finito (no NaN ni infinito)
       if (!normalizedValue.isFinite) {
@@ -213,6 +217,7 @@ class VoiceRFService {
     return trees.isNotEmpty ? sumProbs / trees.length : 0.0;
   }
 
+
   /// Predice la probabilidad de Parkinson desde un archivo de audio
   /// 
   /// Flujo de procesamiento:
@@ -263,24 +268,14 @@ class VoiceRFService {
       // El modelo espera recibir datos normalizados, no los valores originales
       print('  → Ejecutando inferencia con Random Forest...');
       double probability = _predictRF(normalizedFeatures);
+      probability = probability.clamp(0.0, 1.0);
       print('  ✓ Probabilidad obtenida: $probability');
       
-      // Asegurar que la probabilidad esté en el rango válido [0, 1]
-      probability = probability.clamp(0.0, 1.0);
-      
       // PASO 4: Clasificar el nivel de riesgo basado en la probabilidad
-      // Usar umbral óptimo si está disponible, sino usar umbrales fijos
-      final optimalThreshold = _scalerParams?['optimal_threshold'] as double?;
-      final threshold = optimalThreshold ?? 0.5;
-      
       String level;
-      // Ajustar umbrales basados en el umbral óptimo
-      final lowThreshold = threshold * 0.66;  // 66% del umbral óptimo
-      final highThreshold = threshold * 1.33;  // 133% del umbral óptimo
-      
-      if (probability < lowThreshold) {
+      if (probability < 0.33) {
         level = 'Bajo';
-      } else if (probability < highThreshold) {
+      } else if (probability < 0.66) {
         level = 'Medio';
       } else {
         level = 'Alto';
